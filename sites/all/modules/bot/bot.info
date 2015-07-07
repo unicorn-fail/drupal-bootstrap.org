@@ -1,0 +1,11 @@
+name = Bot
+package = Bot
+description = "Enables a network and plugin framework for IRC bots."
+configure = admin/config/bot
+core = 7.x
+; Information added by drupal.org packaging script on 2013-09-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "bot"
+datestamp = "1380556769"
+

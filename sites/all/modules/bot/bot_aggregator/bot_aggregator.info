@@ -1,0 +1,13 @@
+name = Bot Aggregator
+package = Bot
+dependencies[] = bot
+dependencies[] = aggregator
+description = Enables the reporting of aggregated feed items to configured channels.
+configure = admin/config/bot/aggregator
+core = 7.x
+; Information added by drupal.org packaging script on 2013-09-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "bot"
+datestamp = "1380556769"
+

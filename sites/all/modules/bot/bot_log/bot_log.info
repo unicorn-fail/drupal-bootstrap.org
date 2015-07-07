@@ -1,0 +1,13 @@
+name = Bot Log
+package = Bot
+dependencies[] = bot
+description = "Enables the logging of IRC channels."
+configure = admin/config/bot/log
+core = 7.x
+
+; Information added by drupal.org packaging script on 2013-09-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "bot"
+datestamp = "1380556769"
+

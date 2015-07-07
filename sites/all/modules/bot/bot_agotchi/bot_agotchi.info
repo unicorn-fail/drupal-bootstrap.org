@@ -1,0 +1,12 @@
+name = Botagotchi
+package = Bot
+dependencies[] = bot
+description = "Proper care and feeding lets your botagotchi grow and be happy!"
+configure = admin/config/bot/agotchi
+core = 7.x
+; Information added by drupal.org packaging script on 2013-09-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "bot"
+datestamp = "1380556769"
+
