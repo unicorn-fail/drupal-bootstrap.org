@@ -68,6 +68,7 @@ function jquery_update_library() {
     ),
     'version' => '2.1.2',
   );
+
   return $libraries;
 }
 
@@ -76,14 +77,29 @@ function jquery_update_library() {
  */
 function jquery_update_library_alter(&$javascript, $module) {
   $path = drupal_get_path('module', 'jquery_update');
+  $min = variable_get('jquery_update_compression_type', 'min') == 'none' ? '' : '.min';
   $version = variable_get('jquery_update_jquery_version', '1.10');
 
+  // Replace jQuery with the alternative version.
+  $admin_version = variable_get('jquery_update_jquery_admin_version', '');
+
+  if (!empty($admin_version) && path_is_admin(current_path())) {
+    if (version_compare($version, $admin_version, '!=')) {
+      $version = $admin_version;
+    }
+  }
+  // If the ajax version is set then that one always win.
+  if (!empty($_POST['ajax_page_state']['jquery_version'])) {
+    $ajax_version = $_POST['ajax_page_state']['jquery_version'];
+    if (in_array($ajax_version, array('default', '1.5', '1.6', '1.7', '1.8', '1.9', '1.10'))) {
+      $version = $ajax_version;
+    }
+  }
 
   // Modified System Library.
   if ($module === 'system') {
 
     // Make sure we inject either the minified or uncompressed version as desired.
-    $min = variable_get('jquery_update_compression_type', 'min') == 'none' ? '' : '.min';
     $cdn = variable_get('jquery_update_jquery_cdn', 'none');
 
     // Replace jQuery with the alternative version.
@@ -121,6 +137,11 @@ function jquery_update_library_alter(&$javascript, $module) {
       jquery_update_jqueryui_replace($javascript, $cdn, $path, $min);
     }
 
+    // Load and configure the jQuery Migrate plugin.
+    if (variable_get('jquery_update_jquery_migrate_enable', FALSE) && version_compare($version, '1.9', '>=')) {
+      $javascript['jquery']['dependencies'][] = array('jquery_update', 'jquery.migrate');
+    }
+
     // Replace the jQuery Cookie plugin.
     $javascript['cookie']['js']['misc/jquery.cookie.js']['data'] = $path . '/replace/ui/external/jquery.cookie.js';
     // Noting the version based on git commit as no version number is available.
@@ -131,13 +152,18 @@ function jquery_update_library_alter(&$javascript, $module) {
     $javascript['jquery.form']['version'] = '2.69';
 
     // Replace files for Jquery 1.9 and up
+    // @todo Figure out if this is needed if jQuery Migrate is enabled.
     if (version_compare($version, '1.9', '>=')) {
       $javascript['jquery.bbq']['js']['misc/jquery.ba-bbq.js']['data'] = $path . '/replace/misc/1.9/jquery.ba-bbq' . $min . '.js';
     }
   }
 
-  if ($module == 'overlay') {
-    if (version_compare($version, '1.9', '>=')) {
+  if (version_compare($version, '1.9', '>=')) {
+    if ($module === 'jquery_update') {
+      jquery_update_jquery_migrate_replace($javascript, $path, $min);
+    }
+    // @todo Figure out if this is needed if jQuery Migrate is enabled.
+    if ($module == 'overlay') {
       $javascript['parent']['js']['modules/overlay/overlay-parent.js']['data'] = $path . '/replace/misc/1.9/overlay-parent.js';
     }
   }
@@ -148,147 +174,15 @@ function jquery_update_library_alter(&$javascript, $module) {
  */
 function jquery_update_menu() {
   $items['admin/config/development/jquery_update'] = array(
-    'title' => 'jQuery update',
+    'title' => 'jQuery Update',
     'description' => 'Configure settings related to the jQuery upgrade, the library path and compression.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('jquery_update_settings_form'),
     'access arguments' => array('administer site configuration'),
+    'file' => 'jquery_update.admin.inc',
   );
 
   return $items;
-}
-
-/**
- * Admin settings menu callback.
- *
- * @see jquery_update_menu()
- */
-function jquery_update_settings_form() {
-  $form['version_options'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Version options'),
-  );
-
-  $default_version = variable_get('jquery_update_jquery_version', '1.10');
-  $version_options = jquery_update_get_version_options(FALSE);
-  $form['version_options']['jquery_update_jquery_version'] = array(
-    '#type' => 'select',
-    '#title' => t('Site default jQuery version'),
-    '#options' => $version_options,
-    '#default_value' => $default_version,
-    '#description' => t('Select which version of jQuery to use on the site.'),
-  );
-
-  $themes = list_themes();
-  $theme_default = variable_get('theme_default', FALSE);
-  $admin_theme = variable_get('admin_theme', FALSE);
-  $header = array(t('Theme'), t('jQuery version'), t('Operations'));
-  $rows = array();
-  $themes_collapsed = TRUE;
-  // Go through all themes.
-  foreach ($themes as $theme_key => $theme) {
-    // Skip disabled themes, but only if they are not configured as admin
-    // theme. This is an inconsistency in drupal core, that you can select a
-    // disabled theme as admin theme.
-    if (!$theme->status && $theme_key !== $admin_theme) {
-      continue;
-    }
-
-    // Retrieve the version jQuery for this theme.
-    $theme_version = theme_get_setting('jquery_update_jquery_version', $theme_key);
-    // Do not collapse the fieldset if a theme has set a jQuery version.
-    if ($theme_version) {
-      $themes_collapsed = FALSE;
-    }
-
-    // Replace or modify the version name to be displayed.
-    if (empty($theme_version)) {
-      $theme_version = t('Site Default');
-    }
-    elseif (in_array($theme_version, array_keys($version_options))) {
-      $theme_version = $version_options[$theme_version];
-    }
-    else {
-      $theme_version .= ' (' . t('unknown version') . ')';
-    }
-
-    // Provide additional information for default and admin themes.
-    $theme_name = $theme->info['name'];
-    if ($theme_key === $theme_default && ($theme_key === $admin_theme || empty($admin_theme))) {
-      $theme_name .= ' (' . t('default/admin theme') . ')';
-    }
-    elseif ($theme_key === $theme_default) {
-      $theme_name .= ' (' . t('default theme') . ')';
-    }
-    elseif ($theme_key === $admin_theme) {
-      $theme_name .= ' (' . t('admin theme') . ')';
-    }
-
-    // Construct the table row.
-    $rows[] = array(
-      $theme_name,
-      $theme_version,
-      l(t('Configure'), 'admin/appearance/settings/' . $theme_key, array(
-        'attributes' => array(
-          'class' => array(
-            'module-link',
-            'module-link-configure',
-          ),
-        ),
-        'query' => drupal_get_destination(),
-        'fragment' => 'edit-jquery-update',
-      )),
-    );
-  }
-
-  $form['version_options']['themes'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Theme specific versions'),
-    '#description' => t('You can override the default jQuery version above on each themes settings page. This is useful for administrative based themes.'),
-    '#collapsible' => TRUE,
-    '#collapsed' => $themes_collapsed,
-  );
-  $form['version_options']['themes']['overrides'] = array(
-    '#theme' => 'table',
-    '#header' => $header,
-    '#rows' => $rows,
-  );
-
-  $form['jquery_update_compression_type'] = array(
-    '#type' => 'radios',
-    '#title' => t('jQuery compression level'),
-    '#options' => array(
-      'min' => t('Production (minified)'),
-      'none' => t('Development (uncompressed)'),
-    ),
-    // Do not show this field if jQuery version is default
-    '#states' => array(
-      'invisible' => array(
-        ':input[name=jquery_update_jquery_version]' => array('value' => "default"),
-      ),
-    ),
-    '#default_value' => variable_get('jquery_update_compression_type', 'min'),
-  );
-  $form['jquery_update_jquery_cdn'] = array(
-    '#type' => 'select',
-    '#title' => t('jQuery and jQuery UI CDN'),
-    '#options' => array(
-      'none' => t('None'),
-      'google' => t('Google'),
-      'microsoft' => t('Microsoft'),
-      'jquery' => t('jQuery'),
-    ),
-    // Do not show this field if jQuery version is default
-    '#states' => array(
-      'invisible' => array(
-        ':input[name=jquery_update_jquery_version]' => array('value' => "default"),
-      ),
-    ),
-    '#default_value' => variable_get('jquery_update_jquery_cdn', 'none'),
-    '#description' => t('Use jQuery and jQuery UI from a CDN. If the CDN is not available the local version of jQuery and jQuery UI will be used.'),
-  );
-
-  return system_settings_form($form);
 }
 
 /**
@@ -324,7 +218,7 @@ function jquery_update_get_versions() {
   static $drupal_static_fast;
   if (!isset($drupal_static_fast)) {
     $drupal_static_fast['versions'] = &drupal_static(__FUNCTION__, drupal_map_assoc(array(
-      '1.5', '1.7', '1.8', '1.9', '1.10', '1.11'
+      '1.5', '1.7', '1.8', '1.9', '1.10', '1.11', '2.1'
     )));
   }
   return $drupal_static_fast['versions'];
@@ -381,11 +275,11 @@ function jquery_update_jquery_replace(&$javascript, $cdn, $path, $min, $version)
       break;
 
     case '1.7':
-      $trueversion = '1.7.1';
+      $trueversion = '1.7.2';
       break;
 
     case '1.8':
-      $trueversion = '1.8.2';
+      $trueversion = '1.8.3';
       break;
 
     case '1.9':
@@ -398,6 +292,10 @@ function jquery_update_jquery_replace(&$javascript, $cdn, $path, $min, $version)
 
     case '1.11':
       $trueversion = '1.11.2';
+      break;
+
+    case '2.1':
+      $trueversion = '2.1.4';
       break;
   }
   $javascript['jquery']['version'] = $trueversion;
@@ -448,6 +346,76 @@ function jquery_update_jquery_backup(&$javascript, $path, $min, $version) {
     'type' => 'inline',
     'group' => JS_LIBRARY,
     'weight' => -19.999999999,
+  );
+}
+
+/**
+ * Enable and configure the jQuery Migrate Plugin
+ *
+ * @param array $javascript
+ *   The library definition array as seen in hook_library_alter().
+ * @param string $path
+ *   The path to the module where replacements can be found.
+ * @param string $min
+ *   The '.min' to include in the file name if we are requesting a minified
+ *   version.
+ */
+function jquery_update_jquery_migrate_replace(&$javascript, $path, $min) {
+  // Use a static version
+  $version = '1.2.1';
+
+  $jquery_migrate = $path . '/replace/jquery-migrate/' . $version . '/jquery-migrate' . $min . '.js';
+  $javascript['jquery.migrate'] = array(
+    'title' => 'jQuery Migrate',
+    'website' => 'http://plugins.jquery.com/migrate',
+    'version' => $version,
+    'js' => array(
+      $jquery_migrate => array(
+        'group' => JS_LIBRARY,
+        'weight' => -19.8,
+      ),
+    ),
+  );
+
+  // Configure the jQuery Migrate plugin.
+  // Note: This must be done after jQuery has loaded, but before the jQuery
+  // migrate plugin has loaded.
+  $data = 'jQuery.migrateMute=' . (variable_get('jquery_update_jquery_migrate_warnings', FALSE) ? 'false' : 'true') . ';';
+  $data .= 'jQuery.migrateTrace=' . (variable_get('jquery_update_jquery_migrate_trace', FALSE) ? 'true' : 'false') . ';';
+  $javascript['jquery.migrate']['js'][] = array(
+    'data' => $data,
+    'type' => 'inline',
+    'group' => JS_LIBRARY,
+    'weight' => -19.899999999,
+  );
+
+  // Check for CDN support.
+  if (variable_get('jquery_update_jquery_migrate_cdn', 'none') === 'jquery') {
+    $javascript['jquery.migrate']['js'][$jquery_migrate]['data'] = '//code.jquery.com/jquery-migrate-' . $version . $min . '.js';
+    $javascript['jquery.migrate']['js'][$jquery_migrate]['type'] = 'external';
+    jquery_update_jquery_migrate_backup($javascript, $path, $min, $version);
+  }
+}
+
+/**
+ * Add the local fallback in case the jQuery Migrate Plugin from the CDN is unavailable.
+ *
+ * @param array $javascript
+ *   The $libraries array as seen in hook_library_alter()
+ * @param string $path
+ *   The path to the module where replacements can be found.
+ * @param string $min
+ *   The '.min' to include in the file name if we are requesting a minified
+ *   version.
+ * @param string $version
+ *   The version of the jQuery Migrate Plugin to use.
+ */
+function jquery_update_jquery_migrate_backup(&$javascript, $path, $min, $version) {
+  $javascript['jquery.migrate']['js'][] = array(
+    'data' => 'window.jQuery && window.jQuery.migrateWarnings || document.write("<script src=\'' . base_path() . $path . '/replace/jquery-migrate/' . $version . '/jquery-migrate' . $min . '.js\'>\x3C/script>")',
+    'type' => 'inline',
+    'group' => JS_LIBRARY,
+    'weight' => -19.7999999999,
   );
 }
 

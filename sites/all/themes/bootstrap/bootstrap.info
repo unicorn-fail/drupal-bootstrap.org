@@ -30,6 +30,10 @@ regions[page_bottom]    = 'Page bottom'
 ;; Theme Settings
 ;;;;;;;;;;;;;;;;;;;;;
 
+; Container
+; --------------
+settings[bootstrap_fluid_container] = 0
+
 ; Buttons
 ; --------------
 settings[bootstrap_button_size] = ''
@@ -60,6 +64,10 @@ settings[bootstrap_breadcrumb_title] = 1
 settings[bootstrap_navbar_position] = ''
 settings[bootstrap_navbar_inverse] = 0
 
+; Pager
+; --------------
+settings[bootstrap_pager_first_and_last] = 1
+
 ; Region Wells
 ; --------------
 settings[bootstrap_region_well-navigation] = ''
@@ -80,6 +88,9 @@ settings[bootstrap_anchors_smooth_scrolling] = 1
 ; --------------
 settings[bootstrap_forms_required_has_error] = 0
 settings[bootstrap_forms_has_error_value_toggle] = 1
+settings[bootstrap_forms_smart_descriptions] = 1
+settings[bootstrap_forms_smart_descriptions_limit] = 250
+settings[bootstrap_forms_smart_descriptions_allowed_tags] = 'b, code, em, i, kbd, span, strong'
 
 ; Popovers
 ; --------------
@@ -100,8 +111,6 @@ settings[bootstrap_popover_container] = 'body'
 ; Tooltips
 ; --------------
 settings[bootstrap_tooltip_enabled] = 1
-settings[bootstrap_tooltip_descriptions] = 1
-settings[bootstrap_tooltip_descriptions_length] = 200
 settings[bootstrap_tooltip_animation] = 1
 settings[bootstrap_tooltip_html] = 0
 settings[bootstrap_tooltip_placement] = 'auto left'
@@ -114,8 +123,13 @@ settings[bootstrap_tooltip_container] = 'body'
 
 ; Advanced
 ; --------------
-settings[bootstrap_cdn] = 3.2.0
-settings[bootstrap_bootswatch] = ''
+settings[bootstrap_cdn_provider] = 'jsdelivr'
+settings[bootstrap_cdn_custom_css] = '//cdn.jsdelivr.net/bootstrap/3.3.2/css/bootstrap.css'
+settings[bootstrap_cdn_custom_css_min] = '//cdn.jsdelivr.net/bootstrap/3.3.2/css/bootstrap.min.css'
+settings[bootstrap_cdn_custom_js] = '//cdn.jsdelivr.net/bootstrap/3.3.2/js/bootstrap.js'
+settings[bootstrap_cdn_custom_js_min] = '//cdn.jsdelivr.net/bootstrap/3.3.2/js/bootstrap.min.js'
+settings[bootstrap_cdn_jsdelivr_version] = '3.3.2'
+settings[bootstrap_cdn_jsdelivr_theme] = 'bootstrap'
 
 ; Global
 ; --------------
@@ -133,10 +147,17 @@ settings[toggle_search] = 1
 
 ; CSS
 ; --------------
+; Necessary module CSS.
+
+;exclude[css][] = 'modules/block/block.css'
+;exclude[css][] = 'modules/node/node.css'
+;exclude[css][] = 'modules/system/admin.css'
+;exclude[css][] = 'modules/system/system.css'
+;exclude[css][] = 'modules/system/system.admin.css'
+;exclude[css][] = 'modules/system/system.base.css'
+
 exclude[css][] = 'misc/vertical-tabs.css'
 exclude[css][] = 'modules/aggregator/aggregator.css'
-; Necessary administrative block CSS.
-; exclude[css][] = 'modules/block/block.css'
 exclude[css][] = 'modules/book/book.css'
 exclude[css][] = 'modules/comment/comment.css'
 exclude[css][] = 'modules/dblog/dblog.css'
@@ -145,7 +166,6 @@ exclude[css][] = 'modules/filter/filter.css'
 exclude[css][] = 'modules/forum/forum.css'
 exclude[css][] = 'modules/help/help.css'
 exclude[css][] = 'modules/menu/menu.css'
-exclude[css][] = 'modules/node/node.css'
 exclude[css][] = 'modules/openid/openid.css'
 exclude[css][] = 'modules/poll/poll.css'
 exclude[css][] = 'modules/search/search.css'
@@ -160,10 +180,6 @@ exclude[css][] = 'modules/taxonomy/taxonomy.css'
 exclude[css][] = 'modules/tracker/tracker.css'
 exclude[css][] = 'modules/update/update.css'
 exclude[css][] = 'modules/user/user.css'
-;exclude[css][] = 'modules/system/admin.css'
-;exclude[css][] = 'modules/system/system.css'
-;exclude[css][] = 'modules/system/system.admin.css'
-;exclude[css][] = 'modules/system/system.base.css'
 
 
 ;;;;;;;;;;;;;;;;;;;;;
@@ -189,9 +205,9 @@ multipliers[screen-md-max][] = 2x
 multipliers[screen-lg-min][] = 1.5x
 multipliers[screen-lg-min][] = 2x
 
-; Information added by Drupal.org packaging script on 2015-03-09
-version = "7.x-3.1-beta2+29-dev"
+; Information added by Drupal.org packaging script on 2015-06-11
+version = "7.x-3.1-beta2+64-dev"
 core = "7.x"
 project = "bootstrap"
-datestamp = "1425862383"
+datestamp = "1434064031"
 
