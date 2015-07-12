@@ -1,0 +1,15 @@
+[submodule "sites/all/api/bootstrap/7.x-3.x"]
+	path = sites/all/api/bootstrap/7.x-3.x
+	url = burnsjeremy@git.drupal.org:project/bootstrap.git
+[submodule "sites/all/api/bootstrap/7.x-3.0"]
+	path = sites/all/api/bootstrap/7.x-3.0
+	url = burnsjeremy@git.drupal.org:project/bootstrap.git
+[submodule "sites/all/api/bootstrap/7.x-3.1-beta2"]
+	path = sites/all/api/bootstrap/7.x-3.1-beta2
+	url = burnsjeremy@git.drupal.org:project/bootstrap.git
+[submodule "sites/all/api/bootstrap/7.x-4.x"]
+	path = sites/all/api/bootstrap/7.x-4.x
+	url = burnsjeremy@git.drupal.org:project/bootstrap.git
+[submodule "sites/all/api/bootstrap/8.x-3.x"]
+	path = sites/all/api/bootstrap/8.x-3.x
+	url = burnsjeremy@git.drupal.org:project/bootstrap.git
