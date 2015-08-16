@@ -8,5 +8,5 @@
  */
 function db_site_form_aggregator_form_feed_alter(&$form, &$form_state, $form_id) {
   $period = drupal_map_assoc(array(60, 180, 300), 'format_interval');
-  $form['refresh']['#options'] = array_merge($period, $form['refresh']['#options']);
+  $form['refresh']['#options'] = $period + $form['refresh']['#options'];
 }
