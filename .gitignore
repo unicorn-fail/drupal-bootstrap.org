@@ -1,9 +1,9 @@
 # Ignore configuration files that may contain sensitive information.
-sites/*/local.settings.php
+/docroot/sites/*/local.settings.php
 
 # Ignore paths that contain user-generated content.
-sites/*/files
-sites/*/private
+/docroot/sites/*/files
+/docroot/sites/*/private
 
 .DS_Store
 .idea
