@@ -1,5 +1,5 @@
 # Ignore configuration files that may contain sensitive information.
-/docroot/sites/*/local.settings.php
+/docroot/sites/*/settings.local.php
 
 # Ignore paths that contain user-generated content.
 /docroot/sites/*/files
