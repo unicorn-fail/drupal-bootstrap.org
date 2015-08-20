@@ -3336,3 +3336,33 @@ function api_full_classname($name, $namespace = array(), $use_aliases = array())
 
   return $classname . $suffix;
 }
+
+/**
+ * Adds the configured line break character to text.
+ *
+ * @param string $text
+ *   Text to add line breaks to, presumably a class member name or something
+ *   similar that is too long.
+ *
+ * @return string
+ *   Text with line break characters added.
+ */
+function api_add_breaks($text) {
+  $where = array_filter(explode(' ', variable_get('api_breaks_where', '/ :: \\')));
+  if (!count($where)) {
+    return $text;
+  }
+
+  $tag = variable_get('api_breaks_tag', '<wbr />');
+  if (!strlen($tag)) {
+    return $text;
+  }
+
+  $replace = array();
+  foreach ($where as $string) {
+    $replace[] = $string . $tag;
+  }
+
+  $text = str_replace($where, $replace, $text);
+  return $text;
+}

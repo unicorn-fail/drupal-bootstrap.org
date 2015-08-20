@@ -212,7 +212,7 @@ function api_schema() {
       'member_name' => array(
         'description' => 'For class members, the name without Class::',
         'type' => 'varchar',
-        'length' => 127,
+        'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -269,8 +269,8 @@ function api_schema() {
       ),
       'var' => array(
         'description' => 'Variable type from var tag',
-        'type' => 'varchar',
-        'length' => 127,
+        'type' => 'text',
+        'size' => 'medium',
         'not null' => TRUE,
       ),
       'throws' => array(
@@ -421,7 +421,7 @@ function api_schema() {
       'member_name' => array(
         'description' => 'For class members, the name without Class::',
         'type' => 'varchar',
-        'length' => 127,
+        'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -516,8 +516,8 @@ function api_schema() {
     'fields' => array(
       'object_name' => array(
         'type' => 'varchar',
-        'mysql_type' => 'varbinary(127)',
-        'length' => '127',
+        'mysql_type' => 'varbinary(255)',
+        'length' => '255',
       ),
       'branch_id' => array(
         'type' => 'int',
@@ -596,7 +596,7 @@ function api_schema() {
       'member_alias' => array(
         'description' => 'Alias of the member, for trait inheritance',
         'type' => 'varchar',
-        'length' => 127,
+        'length' => 255,
         'not null' => FALSE,
         'default' => NULL,
       ),
@@ -627,15 +627,15 @@ function api_schema() {
       'class_alias' => array(
         'description' => 'Alias of the class, blank for namespaces',
         'type' => 'varchar',
-        'mysql_type' => 'varbinary(127)',
-        'length' => '127',
+        'mysql_type' => 'varbinary(255)',
+        'length' => '255',
         'default' => '',
       ),
       'class_name' => array(
         'description' => 'Name of class or namespace',
         'type' => 'varchar',
-        'mysql_type' => 'varbinary(127)',
-        'length' => '127',
+        'mysql_type' => 'varbinary(255)',
+        'length' => '255',
         'default' => '',
       ),
     ),
@@ -1690,6 +1690,58 @@ function api_update_7139() {
 }
 
 /**
+ * Increase size of various columns.
+ */
+function api_update_7140() {
+  db_change_field('api_documentation', 'var', 'var', array(
+    'description' => 'Variable type from var tag',
+    'type' => 'text',
+    'size' => 'medium',
+    'not null' => TRUE,
+  ));
+  db_change_field('api_documentation', 'member_name', 'member_name', array(
+    'description' => 'For class members, the name without Class::',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+  ));
+  db_change_field('api_documentation', 'member_name', 'member_name', array(
+    'description' => 'For class members, the name without Class::',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+  ));
+  db_change_field('api_members', 'member_alias', 'member_alias', array(
+    'description' => 'Alias of the member, for trait inheritance',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => FALSE,
+    'default' => NULL,
+  ));
+  db_change_field('api_namespace', 'class_name', 'class_name', array(
+    'description' => 'Name of class or namespace',
+    'type' => 'varchar',
+    'mysql_type' => 'varbinary(255)',
+    'length' => '255',
+    'default' => '',
+  ));
+  db_change_field('api_namespace', 'class_alias', 'class_alias', array(
+    'description' => 'Alias of the class, blank for namespaces',
+    'type' => 'varchar',
+    'mysql_type' => 'varbinary(255)',
+    'length' => '255',
+    'default' => '',
+  ));
+  db_change_field('api_reference_storage', 'object_name', 'object_name', array(
+    'type' => 'varchar',
+    'mysql_type' => 'varbinary(255)',
+    'length' => '255',
+  ));
+}
+
+/**
  * Remove variables and other data on uninstall.
  */
 function api_uninstall() {
@@ -1709,6 +1761,9 @@ function api_uninstall() {
   $names[] = 'api_default_project';
   $names[] = 'api_opensearch_name';
   $names[] = 'api_opensearch_description';
+  $names[] = 'api_breaks_where';
+  $names[] = 'api_breaks_tag';
+
   foreach ($names as $name) {
     variable_del($name);
   }

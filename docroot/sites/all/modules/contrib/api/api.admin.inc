@@ -154,6 +154,20 @@ function api_page_admin_form($form, &$form_state) {
     '#title' => t('Description of site for OpenSearch'),
   );
 
+  $form['api_breaks_where'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('api_breaks_where', '/ :: \\'),
+    '#title' => t('Allowed places for line breaks'),
+    '#description' => t('In listing tables, long item names will be allowed to break at these spots (space-separated). Careful of the order if any of these appear in the HTML tag being used!'),
+  );
+
+  $form['api_breaks_tag'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('api_breaks_tag', '<wbr />'),
+    '#title' => t('HTML tag or entity to use to indicate breaks'),
+  );
+
+
   $form = system_settings_form($form);
   $form['#submit'][] = 'api_reset_branches';
 

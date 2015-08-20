@@ -44,6 +44,9 @@ class ApiTestCase extends DrupalWebTestCase {
   function baseSetUp() {
     DrupalWebTestCase::setUp('api', 'ctools', 'gplib', 'node', 'comment', 'dblog', 'views');
 
+    // Set the line break tag to nothing for most tests.
+    variable_set('api_breaks_tag', '');
+
     // For debug purposes, visit the Recent Log Messages report page.
     $this->drupalGet('admin/reports/dblog');
 

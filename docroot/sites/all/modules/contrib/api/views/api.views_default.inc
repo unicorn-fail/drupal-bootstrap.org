@@ -936,6 +936,7 @@ function api_views_default_views() {
   $handler->display->display_options['fields']['project_title']['field'] = 'project_title';
   $handler->display->display_options['fields']['project_title']['label'] = 'Title';
   $handler->display->display_options['fields']['project_title']['element_label_colon'] = FALSE;
+  $handler->display->display_options['fields']['project_title']['link_to_project'] = 'project';
   /* Field: API project: Project type */
   $handler->display->display_options['fields']['project_type']['id'] = 'project_type';
   $handler->display->display_options['fields']['project_type']['table'] = 'api_project';
@@ -1050,14 +1051,24 @@ function api_views_default_views() {
   $handler->display->display_options['fields']['project_name']['field'] = 'project_name';
   $handler->display->display_options['fields']['project_name']['relationship'] = 'project';
   $handler->display->display_options['fields']['project_name']['label'] = 'Project';
+  $handler->display->display_options['fields']['project_name']['link_to_project'] = 'project';
   /* Field: API documentation: Core compatibility */
   $handler->display->display_options['fields']['core_compatibility']['id'] = 'core_compatibility';
   $handler->display->display_options['fields']['core_compatibility']['table'] = 'api_branch';
   $handler->display->display_options['fields']['core_compatibility']['field'] = 'core_compatibility';
+  /* Field: API documentation: Branch name */
+  $handler->display->display_options['fields']['branch_name_1']['id'] = 'branch_name_1';
+  $handler->display->display_options['fields']['branch_name_1']['table'] = 'api_branch';
+  $handler->display->display_options['fields']['branch_name_1']['field'] = 'branch_name';
+  $handler->display->display_options['fields']['branch_name_1']['label'] = '';
+  $handler->display->display_options['fields']['branch_name_1']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['branch_name_1']['element_label_colon'] = FALSE;
   /* Field: API documentation: Branch title */
   $handler->display->display_options['fields']['title']['id'] = 'title';
   $handler->display->display_options['fields']['title']['table'] = 'api_branch';
   $handler->display->display_options['fields']['title']['field'] = 'title';
+  $handler->display->display_options['fields']['title']['alter']['make_link'] = TRUE;
+  $handler->display->display_options['fields']['title']['alter']['path'] = 'api/[project_name]/[branch_name_1]';
   /* Field: API documentation: Branch name */
   $handler->display->display_options['fields']['branch_name']['id'] = 'branch_name';
   $handler->display->display_options['fields']['branch_name']['table'] = 'api_branch';
@@ -1089,6 +1100,7 @@ function api_views_default_views() {
   $handler->display->display_options['defaults']['hide_admin_links'] = FALSE;
 
   $views[$view->name] = $view;
+
 
   // API Namespaces view.
 

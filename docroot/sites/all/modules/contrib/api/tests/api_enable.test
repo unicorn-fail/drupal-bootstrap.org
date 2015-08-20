@@ -27,6 +27,8 @@ class ApiEnableTestCase extends ApiWebPagesBaseTest {
     // Start with only the support modules enabled.
     DrupalWebTestCase::setUp('ctools', 'gplib', 'node', 'dblog', 'views', 'comment');
 
+    variable_set('api_breaks_tag', '');
+
     $this->super_user = $this->drupalCreateUser(array(
       'access content',
       'access administration pages',
