@@ -3097,12 +3097,20 @@ function api_should_queue($branch) {
 /**
  * Returns the list of parsing functions for file extensions.
  *
- * @return
+ * @return array
  *   An associative array whose keys are file extensions, and whose values are
  *   the functions used to parse files with that extension.
  */
 function api_parse_functions() {
-  // @todo This could use a hook to let other modules extend this array?
+  $parse_functions = module_invoke_all('api_parse_functions');
+  drupal_alter('api_parse_functions', $parse_functions);
+  return $parse_functions;
+}
+
+/**
+ * Implements hook_api_parse_functions().
+ */
+function api_api_parse_functions() {
   return array(
     'php' => 'api_parse_php_file',
     'module' => 'api_parse_php_file',

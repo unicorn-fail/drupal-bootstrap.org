@@ -1,0 +1,77 @@
+From b25e951cfb911060d94b3dc3f104fd361713529c Mon Sep 17 00:00:00 2001
+From: Mark Carver <mark.carver@me.com>
+Date: Thu, 20 Aug 2015 00:55:46 -0500
+Subject: [PATCH] Issue #2554399 by markcarver: Add hook invocation and alter
+ to api_parse_functions()
+
+---
+ api.api.php | 27 +++++++++++++++++++++++++++
+ parser.inc  | 12 ++++++++++--
+ 2 files changed, 37 insertions(+), 2 deletions(-)
+
+diff --git a/api.api.php b/api.api.php
+index cdcf975..4553ece 100644
+--- a/api.api.php
++++ b/api.api.php
+@@ -48,4 +48,31 @@ function hook_api_ignore_node_access($query) {
+   return FALSE;
+ }
+ 
++/**
++ * Extend the API module with additional file extension parsing.
++ *
++ * @return array
++ *   An associative array containing the file extension to parse as the key and
++ *   a callback function used to parse that those type of files as its value.
++ *
++ * @see api_parse_functions()
++ * @see api_api_parse_functions()
++ */
++function hook_api_parse_functions() {
++  return array(
++    'php' => 'api_parse_php_file',
++  );
++}
+ 
++/**
++ * Alter existing API parse functions.
++ *
++ * @param array $parse_functions
++ *   An associative array containing the file extension to parse as the key and
++ *   a callback function used to parse that those type of files as its value.
++ *
++ * @see api_parse_functions()
++ */
++function hook_api_parse_functions_alter(array $parse_functions) {
++  $parse_functions['php'] = 'my_module_api_parse_php_file';
++}
+diff --git a/parser.inc b/parser.inc
+index 9420ccf..b2ab616 100644
+--- a/parser.inc
++++ b/parser.inc
+@@ -3097,12 +3097,20 @@ function api_should_queue($branch) {
+ /**
+  * Returns the list of parsing functions for file extensions.
+  *
+- * @return
++ * @return array
+  *   An associative array whose keys are file extensions, and whose values are
+  *   the functions used to parse files with that extension.
+  */
+ function api_parse_functions() {
+-  // @todo This could use a hook to let other modules extend this array?
++  $parse_functions = module_invoke_all('api_parse_functions');
++  drupal_alter('api_parse_functions', $parse_functions);
++  return $parse_functions;
++}
++
++/**
++ * Implements hook_api_parse_functions().
++ */
++function api_api_parse_functions() {
+   return array(
+     'php' => 'api_parse_php_file',
+     'module' => 'api_parse_php_file',
+-- 
+2.3.2 (Apple Git-55)
+

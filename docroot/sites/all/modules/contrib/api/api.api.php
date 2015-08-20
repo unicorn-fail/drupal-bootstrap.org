@@ -48,4 +48,31 @@ function hook_api_ignore_node_access($query) {
   return FALSE;
 }
 
+/**
+ * Extend the API module with additional file extension parsing.
+ *
+ * @return array
+ *   An associative array containing the file extension to parse as the key and
+ *   a callback function used to parse that those type of files as its value.
+ *
+ * @see api_parse_functions()
+ * @see api_api_parse_functions()
+ */
+function hook_api_parse_functions() {
+  return array(
+    'php' => 'api_parse_php_file',
+  );
+}
 
+/**
+ * Alter existing API parse functions.
+ *
+ * @param array $parse_functions
+ *   An associative array containing the file extension to parse as the key and
+ *   a callback function used to parse that those type of files as its value.
+ *
+ * @see api_parse_functions()
+ */
+function hook_api_parse_functions_alter(array $parse_functions) {
+  $parse_functions['php'] = 'my_module_api_parse_php_file';
+}
