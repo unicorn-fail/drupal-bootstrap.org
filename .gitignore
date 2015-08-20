@@ -1,10 +1,12 @@
-# Ignore configuration files that may contain sensitive information.
-/docroot/sites/*/settings.local.php
-
-# Ignore paths that contain user-generated content.
-/docroot/sites/*/files
-/docroot/sites/*/private
-
+# Generic
 .DS_Store
 .idea
-FirePHPCore
+
+# Settings
+/docroot/sites/*/settings.local.php
+
+# Composer
+/vendor/
+
+# User generated content
+/docroot/sites/*/files

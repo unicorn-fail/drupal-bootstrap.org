@@ -1,0 +1,11 @@
+name = Composer Manager Security Advisories
+description = Check for known security issues in Composer libraries from FriendsOfPHP/security-advisories.
+core = 7.x
+dependencies[] = composer_manager
+
+; Information added by Drupal.org packaging script on 2015-07-07
+version = "7.x-1.7+9-dev"
+core = "7.x"
+project = "composer_manager"
+datestamp = "1436288377"
+
