@@ -1,0 +1,13 @@
+{
+    "name": "markcarver/db_markdown",
+    "license": "GPL+2",
+    "authors": [
+        {
+            "name": "Mark Carver",
+            "email": "mark.carver@me.com"
+        }
+    ],
+    "require": {
+        "erusev/parsedown-extra": "0.7.*"
+    }
+}

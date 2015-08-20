@@ -1,0 +1,4 @@
+name = Markdown
+package = Drupal Bootstrap
+description = Provides markdown integration through out the site.
+core = 7.x
