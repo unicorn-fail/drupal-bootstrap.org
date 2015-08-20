@@ -1,0 +1,27 @@
+name = Bootstrap Admin
+description = An administrative sub-theme of the Drupal Bootstrap base theme.
+core = 7.x
+base theme = bootstrap
+
+
+;;;;;;;;;;;;;;;;;;;;;
+;; Regions
+;;;;;;;;;;;;;;;;;;;;;
+
+regions[navigation]     = 'Navigation'
+regions[header]         = 'Top Bar'
+regions[highlighted]    = 'Highlighted'
+regions[help]           = 'Help'
+regions[content]        = 'Content'
+regions[sidebar_first]  = 'Primary'
+regions[sidebar_second] = 'Secondary'
+regions[footer]         = 'Footer'
+regions[page_top]       = 'Page top'
+regions[page_bottom]    = 'Page bottom'
+
+; Information added by Drupal.org packaging script on 2015-08-20
+version = "7.x-3.x-dev"
+core = "7.x"
+project = "bootstrap_admin"
+datestamp = "1440048240"
+
