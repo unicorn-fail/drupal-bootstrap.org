@@ -32,10 +32,10 @@ function composer_manager_settings_form($form, &$form_state) {
   );
 
   $form['composer_manager_autobuild_file'] = array(
-    '#title' => 'Automatically build the composer.json file when enabling or disabling modules in the Drupal UI',
+    '#title' => 'Automatically build the composer.json file when enabling or disabling modules',
     '#type' => 'checkbox',
     '#default_value' => variable_get('composer_manager_autobuild_file', 1),
-    '#description' => t('Automatically build the consolidated composer.json for all contributed modules file in the vendor directory above when modules are enabled or disabled in the Drupal UI. Disable this setting if you want to maintain the composer.json file manually.'),
+    '#description' => t('Automatically build the consolidated composer.json for all contributed modules file in the vendor directory above when modules are enabled or disabled. Disable this setting if you want to maintain the composer.json file manually.'),
   );
 
   $form['composer_manager_autobuild_packages'] = array(
