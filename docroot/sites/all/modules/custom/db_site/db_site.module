@@ -1,7 +1,10 @@
 <?php
 /**
  * @file
+ * Code for the Site feature.
  */
+
+include_once 'db_site.features.inc';
 
 /**
  * Implements hook_form_FORM_ID_alter().
