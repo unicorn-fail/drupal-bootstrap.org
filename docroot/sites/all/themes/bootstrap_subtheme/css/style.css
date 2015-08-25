@@ -1,3 +1,11 @@
 /**
  * Styles for the Bootstrap Subtheme theme.
  */
+
+ul, ol {
+  padding-left: 2em;
+}
+
+.sidebar.second-top {
+  margin-bottom: 30px;
+}

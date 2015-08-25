@@ -13,6 +13,7 @@ regions[help] = Help
 regions[content] = Content
 regions[sidebar_first] = Primary
 regions[sidebar_second] = Secondary
+regions[sidebar_second_top] = Secondary (Top)
 regions[footer] = Footer
 regions[page_top] = Page top
 regions[page_bottom] = Page bottom
@@ -20,7 +21,7 @@ regions[page_bottom] = Page bottom
 ; ========================================
 ; Stylesheets
 ; ========================================
-;stylesheets[all][] = css/style.css
+stylesheets[all][] = css/style.css
 
 settings[bootstrap_fluid_container] = 1
 settings[bootstrap_region_well-sidebar_second] = 'well'
