@@ -18,7 +18,17 @@ class EntityController extends \EntityAPIControllerExportable {
    */
   public function export($entity, $prefix = '') {
     $vars = get_object_vars($entity);
-    unset($vars[$this->statusKey], $vars[$this->moduleKey], $vars['is_new'], $vars['refs'], $vars['rdf_mapping'], $vars['repository']);
+    unset(
+      $vars[$this->statusKey],
+      $vars[$this->moduleKey],
+      $vars['initialized'],
+      $vars['is_new'],
+      $vars['output'],
+      $vars['rdf_mapping'],
+      $vars['refs'],
+      $vars['repository'],
+      $vars['settings']['default']
+    );
     if ($this->nameKey != $this->idKey) {
       unset($vars[$this->idKey]);
     }

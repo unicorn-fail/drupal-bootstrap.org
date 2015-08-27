@@ -4,8 +4,8 @@
  * Install and update hooks.
  */
 
-// Require the module file.
-require_once 'git_clone.module';
+// Include the module file.
+include_once 'git_clone.module';
 
 /**
  * Implements hook_schema().
@@ -50,13 +50,6 @@ function git_clone_schema() {
         'type' => 'varchar',
         'length' => 255,
         'not null' => FALSE,
-      ),
-      'refs' => array(
-        'description' => 'Repository references.',
-        'type' => 'blob',
-        'not null' => FALSE,
-        'size' => 'big',
-        'serialize' => TRUE,
       ),
       'settings' => array(
         'description' => 'Settings.',
@@ -221,4 +214,21 @@ function git_clone_uninstall() {
   /** @var DrupalQueueInterface $queue */
   $queue = DrupalQueue::get(GIT_CLONE_QUEUE, TRUE);
   $queue->deleteQueue();
+}
+
+/**
+ * Remove "refs" field from {git_clone} table.
+ */
+function git_clone_update_7001() {
+  // Drop the "refs" field.
+  db_drop_field('git_clone', 'refs');
+
+  // Because the entity info is cached, how Drupal bootstraps and because the
+  // class and path to the file stream wrapper has changed the entire registry,
+  // schema for git_clone and entity info cache needs to be rebuilt so it
+  // doesn't fatal after the update has finished during a normal cache clear.
+  registry_rebuild();
+  drupal_static_reset('file_get_stream_wrappers');
+  drupal_get_schema('git_clone', TRUE);
+  entity_info_cache_clear();
 }

@@ -224,7 +224,7 @@ function git_clone_permission() {
 function git_clone_stream_wrappers() {
   $wrappers['gitclone'] = array(
     'name' => t('Git clone files'),
-    'class' => '\Drupal\GitClone\StreamWrapper',
+    'class' => 'GitCloneStreamWrapper',
     'description' => t('Local cloned git repository files.'),
     'type' => STREAM_WRAPPERS_LOCAL_HIDDEN,
   );

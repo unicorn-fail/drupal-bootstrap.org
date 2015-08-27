@@ -26,25 +26,18 @@ class GitClone extends \Entity {
    **************************************************************************/
 
   /**
+   * The name of the providing module if the entity has been defined in code.
+   *
+   * @var string
+   */
+  public $module;
+
+  /**
    * The repository machine name identifier.
    *
    * @var string
    */
   public $name;
-
-  /**
-   * The display title of this entity.
-   *
-   * @var string
-   */
-  public $title;
-
-  /**
-   * The public remote repository URL this git entity will use.
-   *
-   * @var string
-   */
-  public $url;
 
   /**
    * The set reference of the git clone.
@@ -86,17 +79,24 @@ class GitClone extends \Entity {
    *
    * @var int
    */
-  public $status = ENTITY_CUSTOM;
+  public $status;
 
   /**
-   * The name of the providing module if the entity has been defined in code.
+   * The display title of this entity.
    *
    * @var string
    */
-  public $module;
+  public $title;
+
+  /**
+   * The public remote repository URL this git entity will use.
+   *
+   * @var string
+   */
+  public $url;
 
   /**************************************************************************
-   * Private properties.
+   * Protected properties.
    **************************************************************************/
 
   /**
@@ -104,7 +104,23 @@ class GitClone extends \Entity {
    *
    * @var array
    */
-  private static $allowedRefs = array('branch', 'tag');
+  protected static $allowedRefs = array('branch', 'tag');
+
+  /**
+   * Determines whether or not the entity has been initialized.
+   *
+   * @see GitClone::init()
+   *
+   * @var bool
+   */
+  protected $initialized;
+
+  /**
+   * Stores the output from commands that have ran.
+   *
+   * @var array
+   */
+  protected $output;
 
   /**************************************************************************
    * Sub-classed methods.
@@ -115,7 +131,13 @@ class GitClone extends \Entity {
    */
   public function __sleep() {
     $vars = parent::__sleep();
-    unset($vars['rdf_mapping'], $vars['refs'], $vars['repository']);
+    unset(
+      $vars['initialized'],
+      $vars['output'],
+      $vars['rdf_mapping'],
+      $vars['refs'],
+      $vars['repository']
+    );
     return $vars;
   }
 
@@ -123,7 +145,7 @@ class GitClone extends \Entity {
    * {@inheritdoc}
    */
   public function save($queue = TRUE) {
-    $this->init();
+    $this->init(TRUE);
     if ($queue) {
       $this->queue();
     }
@@ -133,9 +155,9 @@ class GitClone extends \Entity {
   }
 
   /**
-   * Set up the object instance on construction or unserializiation.
+   * {@inheritdoc}
    */
-  protected function setUp() {
+  public function setUp() {
     parent::setUp();
     $this->init();
   }
@@ -147,30 +169,80 @@ class GitClone extends \Entity {
   /**
    * Processes a git clone entity from the queue.
    *
-   * This method should not be used directly, use the queue method instead.
-   *
-   * @return bool
-   *   TRUE if GitClone successfully dequeued, FALSE on error.
+   * Do not use this method directly, use the GitClone::queue() method instead.
    *
    * @see GitClone::queue()
+   * @see git_clone_cron_queue_info()
+   * @see _git_clone_dequeue_callback()
    *
    * @throws \Exception
    *   Thrown when a git command has failed.
    */
   public function dequeue() {
+    $tokens = array(
+      '@id' => $this->identifier(),
+    );
+
+    // Check if this method was invoked as a result of using GitClone::queue().
+    // This ensures that this method cannot be invoked directly. Do not throw
+    // an exception as that will cause cron to re-queue something that wasn't
+    // properly queued to begin with. Even if by some chance that this was a
+    // valid queue item, not throwing an exception will allow it to be deleted
+    // from the existing queue and then re-queued on the next cron run.
+    if (!$this->isQueued()) {
+      watchdog('git_clone', '@id: entity does not exist in queue, aborting dequeue. Use the \Drupal\GitClone\GitClone::queue() method to queue an entity.', $tokens);
+      return;
+    }
+
+    $error = FALSE;
     if (!$this->reset()) {
-      throw new \Exception(t('Unable to reset GitClone working tree.'));
-    };
-    if (!$this->fetch()) {
-      throw new \Exception(t('Unable to fetch GitClone references.'));
-    };
-    if (!$this->checkout()) {
-      throw new \Exception(t('Unable to checkout set GitClone reference.'));
-    };
-    if (!$this->merge()) {
-      throw new \Exception(t('Unable to merge GitClone remote reference into local working tree.'));
-    };
-    return TRUE;
+      $error = '@id: Unable to reset the working tree.';
+    }
+    elseif (!$this->fetch()) {
+      $error = '@id: Unable to fetch remote.';
+    }
+    elseif (!$this->checkout()) {
+      $error = '@id: Unable to checkout reference.';
+    }
+    elseif (!$this->merge()) {
+      $error = '@id: Unable to merge origin into local working tree.';
+    }
+
+    // Retrieve the output of all the commands that ran.
+    $output = $this->getOutput();
+
+    // Handle any errors and throw an exception so it can re-queue.
+    if ($error) {
+      watchdog('git_clone', $error . $output, $tokens, WATCHDOG_ERROR);
+      throw new \Exception(format_string($error . ' See logs for more details.', $tokens));
+    }
+
+    // Update the last fetched time using time() instead of REQUEST_TIME since
+    // this process can take much longer than when the initial request started.
+    $this->lastFetched(time());
+
+    // Log a successful dequeue.
+    watchdog('git_clone', '@id: Successfully fetched and dequeued' . $output, $tokens);
+  }
+
+  /**
+   * Retrieves the output from commands that have ran.
+   *
+   * @param bool $reset
+   *   Toggle determining whether or not to remove the stored output returned.
+   *
+   * @return string
+   *   The output of ran commands.
+   */
+  public function getOutput($reset = TRUE) {
+    $output = '';
+    if (isset($this->output)) {
+      $output = "\n<br/><br/><pre><code>" . implode("\n", $this->output) . "</code></pre>";
+      if ($reset) {
+        unset($this->output);
+      }
+    }
+    return $output;
   }
 
   /**
@@ -205,7 +277,7 @@ class GitClone extends \Entity {
       if (!is_dir($path)) {
         return FALSE;
       }
-      if (is_dir($path) && !is_writable($path) && !drupal_chmod($path)) {
+      if (!drupal_is_cli() && is_dir($path) && !is_writable($path) && !drupal_chmod($path)) {
         drupal_set_message(t('The directory %directory exists but is not writable and could not be made writable.', array('%directory' => $path)), 'error');
       }
     }
@@ -216,17 +288,148 @@ class GitClone extends \Entity {
   }
 
   /**
-   * Initializes the git clone repository directory.
+   * Retrieves a repository's remote references, parsing them if necessary.
+   *
+   * @param bool $force
+   *   Toggle determining whether or not to force a remote fetch.
+   * @param bool $reset
+   *   Toggle determining whether to reset exist cached data.
+   *
+   * @return bool
+   *   TRUE if there are remote references, FALSE on failure.
+   */
+  public function getRefs($force = FALSE, $reset = FALSE) {
+    // Immediately return if already set.
+    if (!isset($this->is_new) && !$force && !empty($this->refs)) {
+      return TRUE;
+    }
+
+    // Set defaults so they can be used elsewhere in code.
+    $this->refs = array(
+      'branch' => array(),
+      'tag' => array(),
+    );
+
+    // Immediately return if URL is not yet set.
+    if (!$this->url) {
+      return FALSE;
+    }
+
+    // Load cached references for this URL.
+    $cid = 'gitclone:refs:' . drupal_hash_base64($this->url);
+    if (!$reset && ($cache = cache_get($cid)) && isset($cache->data)) {
+      $this->refs = $cache->data;
+      return TRUE;
+    }
+
+    // No cache found, attempt to retrieve the remote references.
+    $output = $this->run('ls-remote', array($this->url), TRUE);
+
+    // Command failed execution, (e.g. invalid URL).
+    if ($output === FALSE) {
+      return FALSE;
+    }
+
+    // Extract the references from the output.
+    $default = NULL;
+    foreach (array_filter(explode("\n", $output)) as $lines) {
+      list($hash, $ref) = explode("\t", $lines);
+      if ($ref === 'HEAD') {
+        $default = $hash;
+        continue;
+      }
+      $parts = explode('/', $ref);
+      if (isset($parts[1]) && isset($parts[2])) {
+        $type = $parts[1];
+        if ($type === 'heads') {
+          $type = 'branch';
+        }
+        elseif ($type === 'tags') {
+          $type = 'tag';
+        }
+        $name = $parts[2];
+        if ($default === $hash && is_array($this->settings)) {
+          $this->settings['default'] = $name;
+        }
+        $this->refs[$type][$name] = array(
+          'name' => $name,
+          'sha' => $hash,
+          'type' => $type,
+        );
+      }
+    }
+
+    // Cache the references.
+    cache_set($cid, $this->refs, 'cache');
+
+    return TRUE;
+  }
+
+  /**
+   * Retrieves the git clone settings.
+   *
+   * @return array|string
+   *   The settings array or serialized string (depending on the original state
+   *   it was in).
+   */
+  public function getSettings() {
+    $settings = array();
+    if (!isset($this->settings)) {
+      $this->settings = array();
+    }
+
+    // Since the settings property can be both an array or a serialized string
+    // (depending on the current point in the Entity API process), the
+    // serialized string must be checked for, converted to and array, merged
+    // with defaults and converted back to a serialized string.
+    $serialized = FALSE;
+    if (is_string($this->settings)) {
+      if ($settings = unserialize($this->settings)) {
+        $serialized = TRUE;
+      }
+      else {
+        $settings = array();
+      }
+    }
+    elseif (is_array($this->settings)) {
+      $settings = $this->settings;
+    }
+
+    // Merge in default settings.
+    $defaults = array(
+      'default' => NULL,
+      'fetch_threshold' => 3600,
+    );
+    $settings = drupal_array_merge_deep($defaults, $settings);
+
+    // Return the correct format.
+    return $this->settings = ($serialized ? serialize($settings) : $settings);
+  }
+
+  /**
+   * Fully initializes the git clone entity after it has been created or loaded.
+   *
+   * @param bool $force
+   *   Toggle determining whether or not to force a reinitialization.
    *
    * @return GitClone
    *   The current GitClone entity instance.
    *
+   * @see GitClone::save()
+   * @see EntityController::load()
+   *
    * @chainable
    */
-  public function init() {
-    if (!$this->repository) {
+  public function init($force = FALSE) {
+    if (!$force && isset($this->initialized)) {
+      return $this;
+    }
+    $this->initialized = TRUE;
+
+    // Ensure a Gitonomy repository is instantiated.
+    if (!$force && !isset($this->repository)) {
       $options = _git_clone_gitonomy_options();
-      if (($path = $this->getPath()) && !empty($this->url)) {
+      if (($path = $this->getPath(FALSE)) && !empty($this->url)) {
         $git_exists = file_exists("$path/.git");
         if (!$git_exists && in_array($this->refType, self::$allowedRefs)) {
           try {
@@ -239,7 +442,6 @@ class GitClone extends \Entity {
         }
         elseif ($git_exists && in_array($this->refType, self::$allowedRefs)) {
           $this->repository = new Repository($path, $options);
-          $this->reset();
         }
       }
       else {
@@ -263,7 +465,81 @@ class GitClone extends \Entity {
         }
       }
     }
+
+    // Initialize the settings.
+    $this->getSettings();
+
+    // Initialize the refs.
+    $this->getRefs($force);
+
     return $this;
+  }
+
+  /**
+   * Determines whether or not the git clone has expired.
+   *
+   * This is based on the fetch threshold setting.
+   *
+   * @return bool
+   *   TRUE or FALSE
+   */
+  public function isExpired() {
+    if ($last_fetch = $this->lastFetched()) {
+      // Use time() instead of REQUEST_TIME since clones can take longer.
+      return (time() - $last_fetch) >= $this->settings['fetch_threshold'];
+    }
+    return TRUE;
+  }
+
+  /**
+   * Determines whether or not a git clone is currently queued.
+   *
+   * @return bool
+   *   TRUE or FALSE
+   *
+   * @see GitClone::queue()
+   */
+  public function isQueued() {
+    $queued = array();
+    /** @var \SelectQuery $query */
+    $query = db_select('queue', 'q')->fields('q')->condition('name', 'git_clone');
+    foreach ($query->execute()->fetchAllAssoc('item_id') as $item) {
+      /** @var GitClone $clone */
+      if ($clone = unserialize($item->data)) {
+        $queued[] = $clone->identifier();
+      }
+    }
+    return in_array($this->identifier(), $queued);
+  }
+
+  /**
+   * Retrieves or sets the last time a git clone was fetched.
+   *
+   * @param int $timestamp
+   *   The timestamp to set. If set to TRUE, the current time() will be used.
+   *
+   * @return int
+   *   The timestamp of the last fetch or 0 if no timestamp has been recorded.
+   */
+  public function lastFetched($timestamp = NULL) {
+    $cid = 'gitclone:last_fetched';
+    $last_fetched = array();
+
+    // Retrieve cached last fetched data.
+    if (($cache = cache_get($cid)) && isset($cache->data)) {
+      $last_fetched = $cache->data;
+    }
+
+    // Set the timestamp.
+    if ($timestamp) {
+      $last_fetched[$this->name] = $timestamp;
+      cache_set($cid, $last_fetched);
+    }
+    elseif (!isset($last_fetched[$this->name])) {
+      $last_fetched[$this->name] = 0;
+    }
+
+    return $last_fetched[$this->name];
   }
 
   /**
@@ -272,84 +548,24 @@ class GitClone extends \Entity {
    * @return GitClone
    *   The current GitClone entity instance.
    *
+   * @see git_clone_cron_queue_info()
+   * @see _git_clone_dequeue_callback()
+   * @see GitClone::dequeue()
+   *
    * @chainable
    */
   public function queue() {
-    /** @var \DrupalQueueInterface $q */
-    $q = \DrupalQueue::get(GIT_CLONE_QUEUE, TRUE);
-    $q->createQueue();
-    $q->createItem($this);
+    // Only continue if not already queued and fetch threshold has expired.
+    if (!$this->isQueued() && $this->isExpired()) {
+      /** @var \DrupalQueueInterface $queue */
+      $queue = \DrupalQueue::get(GIT_CLONE_QUEUE, TRUE);
+      $queue->createQueue();
+      $queue->createItem($this);
+      drupal_set_message(t('Queued the "@label" git clone to fetch on next cron run.', array(
+        '@label' => $this->label(),
+      )));
+    }
     return $this;
-  }
-
-  /**
-   * Retrieves and parses a repository's remote references.
-   *
-   * @return bool
-   *   TRUE if the remote references were parsed, FALSE on failure.
-   */
-  public function lsRemote() {
-    // Immediately fail if there is no URL.
-    if (!$this->url) {
-      return FALSE;
-    }
-
-    $output = $this->run('ls-remote', array($this->url), TRUE);
-
-    // Immediately fail if the command failed execution, (e.g. invalid URL).
-    if ($output === FALSE) {
-      return FALSE;
-    }
-
-    $default = NULL;
-    $refs = array(
-      'branch' => array(),
-      'tag' => array(),
-    );
-    $settings = array(
-      'default' => NULL,
-    );
-
-    // Extract the references from the output.
-    foreach (array_filter(explode("\n", $output)) as $lines) {
-      list($hash, $ref) = explode("\t", $lines);
-      if ($ref === 'HEAD') {
-        $default = $hash;
-        continue;
-      }
-      $parts = explode('/', $ref);
-      if (isset($parts[1]) && isset($parts[2])) {
-        $type = $parts[1];
-        if ($type === 'heads') {
-          $type = 'branch';
-        }
-        elseif ($type === 'tags') {
-          $type = 'tag';
-        }
-        $name = $parts[2];
-        if ($default === $hash) {
-          $settings['default'] = $name;
-        }
-        $refs[$type][$name] = array(
-          'name' => $name,
-          'sha' => $hash,
-          'type' => $type,
-        );
-      }
-    }
-
-    $current_settings = $this->settings;
-    $this->refs = $refs;
-    $this->settings = $settings;
-
-    // Save (without re-queueing) if settings have changed.
-    if (!isset($this->is_new) && drupal_array_diff_assoc_recursive($settings, $current_settings)) {
-      $this->refs = $refs;
-      $this->settings = $settings;
-      $this->save(FALSE);
-    }
-
-    return TRUE;
   }
 
   /**************************************************************************
@@ -404,6 +620,33 @@ class GitClone extends \Entity {
       $args[] = '--tags';
     }
     return $this->run('fetch', $args);
+  }
+
+
+  /**
+   * Logs the output of a command that has ran.
+   *
+   * @param string $command
+   *   Git command that was ran (checkout, branch, tag).
+   * @param array $args
+   *   Arguments of git command.
+   * @param mixed $output
+   *   The output from the command.
+   */
+  protected function log($command, array $args = array(), $output = NULL) {
+    static $binary;
+    if (!isset($binary)) {
+      $binary = _git_clone_binary_path();
+    }
+    if (!isset($this->output)) {
+      $this->output = array();
+    }
+    $this->output[] = format_string("@binary @command @args\n!output", array(
+      '@binary' => $binary,
+      '@command' => $command,
+      '@args' => implode(' ', $args),
+      '!output' => $output,
+    ));
   }
 
   /**
@@ -469,34 +712,23 @@ class GitClone extends \Entity {
    * @chainable
    */
   protected function run($command, array $args = array(), $return_output = FALSE) {
-    $output = $return_output ? '' : $this;
-    if ($this->repository) {
-      try {
-        $command_hook = _git_clone_hook_name($command);
-        $context = array(
-          'output' => $return_output,
-        );
-        drupal_alter('git_clone_pre_' . $command_hook, $args, $this, $context);
-        $ret = $this->repository->run($command, $args);
-        watchdog('git_clone', '!command !args: <pre><code>!output</code></pre>', array(
-          '!command' => $command,
-          '!args' => implode(' ', $args),
-          '!output' => $ret,
-        ), WATCHDOG_DEBUG);
-        drupal_alter('git_clone_post_' . $command_hook, $ret, $this, $context);
-        if ($return_output) {
-          $output = $ret;
-        }
-      }
-      catch (\Exception $e) {
-        drupal_set_message($e->getMessage(), 'error');
-        $output = FALSE;
+    $return = $return_output ? '' : $this;
+    $command_hook = _git_clone_hook_name($command);
+    $context = array('output' => $return_output);
+    drupal_alter('git_clone_pre_' . $command_hook, $args, $this, $context);
+    try {
+      $output = $this->repository->run($command, $args);
+      $this->log($command, $args, $output);
+      drupal_alter('git_clone_post_' . $command_hook, $output, $this, $context);
+      if ($return_output) {
+        $return = $output;
       }
     }
-    else {
-      $output = FALSE;
+    catch (\Exception $e) {
+      watchdog('git_clone', $e->getMessage(), array(), WATCHDOG_ERROR);
+      $return = FALSE;
     }
-    return $output;
+    return $return;
   }
 
 }

@@ -1,15 +1,13 @@
 <?php
 /**
  * @file
- * Contains Drupal\GitClone\StreamWrapper.
+ * Contains GitCloneStreamWrapper.
  */
-
-namespace Drupal\GitClone;
 
 /**
  * Drupal system stream wrapper abstract class.
  */
-class StreamWrapper extends \DrupalLocalStreamWrapper {
+class GitCloneStreamWrapper extends DrupalLocalStreamWrapper {
 
   /**
    * {@inheritdoc}

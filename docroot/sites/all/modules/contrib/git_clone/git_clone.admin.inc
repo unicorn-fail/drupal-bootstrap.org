@@ -32,10 +32,35 @@ function _git_clone_form_default_value($name, array $form, array $form_state, $d
   else {
     $value = $clone->$name;
   }
-  if (is_array($default_value)) {
-    return isset($value) ? array($value) : $default_value;
+  if (isset($value)) {
+    return is_array($default_value) && !is_array($value) ? array($value) : $value;
   }
-  return isset($value) ? $value : $default_value;
+  return $default_value;
+}
+
+/**
+ * Helper function for retrieving the correct default setting value.
+ *
+ * @param string $name
+ *   The name of the GitClone property.
+ * @param array $form
+ *   The form array.
+ * @param array $form_state
+ *   The form state array.
+ * @param string|mixed $default_value
+ *   The default value to provide if nothing set on GitClone or the $form_state
+ *   values.
+ *
+ * @return mixed
+ *   The default value.
+ */
+function _git_clone_form_default_setting_value($name, array $form, array $form_state, $default_value = '') {
+  $settings = _git_clone_form_default_value('settings', $form, $form_state, array());
+  $value = isset($settings[$name]) ? $settings[$name] : NULL;
+  if (isset($value)) {
+    return is_array($default_value) && !is_array($value) ? array($value) : $value;
+  }
+  return $default_value;
 }
 
 /**
@@ -73,7 +98,14 @@ function git_clone_form(array $form, array &$form_state, GitClone $clone, $op) {
     $op = 'add';
   }
 
+  // Add the actions container.
+  $form['actions'] = array(
+    '#type' => 'actions',
+    '#weight' => 100,
+  );
+
   // Add.
+  $save = TRUE;
   if ($op === 'add') {
     // Initialize a description of the steps for the wizard.
     if (empty($form_state['step'])) {
@@ -82,6 +114,7 @@ function git_clone_form(array $form, array &$form_state, GitClone $clone, $op) {
     }
     $step = &$form_state['step'];
     $step_info = &$form_state['step_information'][$step];
+    $save = $step >= (count($form_state['step_information']) - 1);
 
     // Merge in stored values from other completed steps, if multi-step form.
     foreach ($form_state['step_information'] as $step_index => $info) {
@@ -98,9 +131,6 @@ function git_clone_form(array $form, array &$form_state, GitClone $clone, $op) {
     $form = call_user_func_array($step_info['form'], $args);
 
     // Provide the necessary form actions.
-    if (!isset($form['actions'])) {
-      $form['actions'] = array('#type' => 'actions');
-    }
     if ($step > 0) {
       $form['actions']['prev'] = array(
         '#type' => 'submit',
@@ -108,16 +138,10 @@ function git_clone_form(array $form, array &$form_state, GitClone $clone, $op) {
         '#limit_validation_errors' => array(),
       );
     }
-    if ($step < count($form_state['step_information']) - 1) {
+    if (!$save) {
       $form['actions']['next'] = array(
         '#type' => 'submit',
         '#value' => t('Next'),
-      );
-    }
-    else {
-      $form['actions']['save'] = array(
-        '#type' => 'submit',
-        '#value' => t('Save git clone'),
       );
     }
 
@@ -132,16 +156,55 @@ function git_clone_form(array $form, array &$form_state, GitClone $clone, $op) {
       $args = array($form, &$form_state, $clone, $op);
       $form = call_user_func_array($step_info['form'], $args);
     }
+  }
+
+  // Add in the settings and "save" button.
+  if ($save) {
+    $args = array($form, &$form_state, $clone, $op);
+    $form = call_user_func_array('git_clone_form_settings', $args);
+
     // Provide the necessary form actions.
-    if (!isset($form['actions'])) {
-      $form['actions'] = array('#type' => 'actions');
-    }
     $form['actions']['save'] = array(
       '#type' => 'submit',
       '#value' => t('Save git clone'),
     );
   }
 
+  return $form;
+}
+
+/**
+ * The "settings" fieldset.
+ *
+ * @param array $form
+ *   The form array.
+ * @param array $form_state
+ *   The form state array.
+ * @param GitClone $clone
+ *   The current entity.
+ *
+ * @return array
+ *   The constructed form.
+ */
+function git_clone_form_settings(array $form, array &$form_state, GitClone $clone) {
+  $form['settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Settings'),
+    '#tree' => TRUE,
+    '#collapsible' => TRUE,
+  );
+
+  $fetch_threshold = drupal_map_assoc(array(
+    60, 180, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 32400,
+    43200, 64800, 86400, 172800, 259200, 604800, 1209600, 2419200,
+  ), 'format_interval');
+  $form['settings']['fetch_threshold'] = array(
+    '#type' => 'select',
+    '#title' => t('Fetch Threshold'),
+    '#description' => t('The amount of time that must pass before the git clone will be queued and fetched during a cron run. This time is relative to when the git clone was last fetched successfully, not the time cron was initiated.'),
+    '#options' => $fetch_threshold,
+    '#default_value' => _git_clone_form_default_setting_value('fetch_threshold', $form, $form_state, array(3600)),
+  );
   return $form;
 }
 
@@ -258,7 +321,7 @@ function git_clone_form_url_validate(array $form, array &$form_state) {
   $clone = entity_ui_form_submit_build_entity($form, $form_state);
 
   // Determine if URL is valid by attempting to retrieve its references.
-  if (!$clone->lsRemote()) {
+  if (!$clone->getRefs(TRUE)) {
     $message = t('The provided URL is not a valid public remote git repository.');
     if (strpos($form_state['values']['url'], '@') !== FALSE) {
       $message .= ' ' . t('Please provide a URL that does not need user authentication.');
@@ -289,21 +352,23 @@ function git_clone_form_reference(array $form, array &$form_state, GitClone $clo
     'branch' => t('Branch'),
     'tag' => t('Tag'),
   );
-  foreach ($clone->refs as $type => $refs) {
-    foreach ($refs as $ref) {
-      $key = $type . '|' . $ref['name'];
-      $value = $ref['name'];
-      if ($type === 'branch' && $clone->settings['default'] === $ref['name']) {
-        $default = array($key);
-        $value .= ' (default)';
+  if (!empty($clone->refs)) {
+    foreach ($clone->refs as $type => $refs) {
+      foreach ($refs as $ref) {
+        $key = $type . '|' . $ref['name'];
+        $value = $ref['name'];
+        if ($type === 'branch' && $clone->settings['default'] === $ref['name']) {
+          $default = array($key);
+          $value .= ' (default)';
+        }
+        $options[$type_labels[$type]][$key] = $value;
       }
-      $options[$type_labels[$type]][$key] = $value;
     }
   }
-
   $form['reference'] = array(
     '#type' => 'select',
     '#title' => t('Repository reference'),
+    '#description' => t('This list is cached and regenerated during cron. You can either wait for cron or manually clear the site cache.'),
     '#options' => $options,
     '#default_value' => _git_clone_form_default_value('reference', $form, $form_state, $default),
     '#process' => array_merge(element_info_property('select', '#process', array()), array('_git_clone_form_reference_process')),
