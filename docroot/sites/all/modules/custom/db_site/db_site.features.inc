@@ -11,19 +11,27 @@ function db_site_default_git_clone() {
   $items = array();
   $items['bootstrap_7.x-3.0'] = entity_import('git_clone', '{
     "name" : "bootstrap_7.x-3.0",
-    "title" : "Bootstrap: 7.x-3.0",
-    "url" : "http:\\/\\/git.drupal.org\\/project\\/bootstrap.git",
     "ref" : "7.x-3.0",
     "refType" : "tag",
-    "settings" : { "default" : "7.x-3.x" }
+    "settings" : { "fetch_threshold" : "2419200" },
+    "title" : "Bootstrap: 7.x-3.0",
+    "url" : "http:\\/\\/git.drupal.org\\/project\\/bootstrap.git"
   }');
   $items['bootstrap_7.x-3.x'] = entity_import('git_clone', '{
     "name" : "bootstrap_7.x-3.x",
-    "title" : "Bootstrap: 7.x-3.x",
-    "url" : "http:\\/\\/git.drupal.org\\/project\\/bootstrap.git",
     "ref" : "7.x-3.x",
     "refType" : "branch",
-    "settings" : { "default" : "7.x-3.x" }
+    "settings" : { "fetch_threshold" : "3600" },
+    "title" : "Bootstrap: 7.x-3.x",
+    "url" : "http:\\/\\/git.drupal.org\\/project\\/bootstrap.git"
+  }');
+  $items['icon_7.x-1.x'] = entity_import('git_clone', '{
+    "name" : "icon_7.x-1.x",
+    "ref" : "7.x-1.x",
+    "refType" : "branch",
+    "settings" : { "fetch_threshold" : "604800" },
+    "title" : "Icon: 7.x-1.x",
+    "url" : "http:\\/\\/git.drupal.org\\/project\\/icon.git"
   }');
   return $items;
 }
