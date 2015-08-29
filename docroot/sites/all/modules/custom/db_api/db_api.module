@@ -1,0 +1,137 @@
+<?php
+/**
+ * @file
+ * db_api.module
+ */
+
+/**
+ * Implements hook_api_parse_functions().
+ */
+function db_api_api_parse_functions() {
+  return array(
+    'md' => '_db_api_parse_md_file',
+  );
+}
+
+/**
+ * Remove an entire preg_match string from a docblock source string.
+ *
+ * @param array $docblock
+ *   Array from api_parse_file() containing the file contents and information
+ *   about the file, branch, etc. Passed by reference.
+ * @param array $matches
+ *   The matches from preg_match.
+ */
+function _db_api_remove_preg_match(array &$docblock, array $matches) {
+  $docblock['source'] = preg_replace('/' . preg_quote($matches[0]) . '/Us', '', $docblock['source']);
+}
+
+/**
+ * Callback for parsing "md" file types.
+ *
+ * @param array $docblock
+ *   Array from api_parse_file() containing the file contents and information
+ *   about the file, branch, etc.
+ */
+function _db_api_parse_md_file(array $docblock) {
+  $docblock['start_line'] = 0;
+
+  // API uses the file basename as the title by default. Attempt to find the
+  // first H1 (#) in the file and use that as the title instead.
+  if (preg_match("/# ([^\n]+)\n/Us", $docblock['source'], $matches)) {
+    $docblock['title'] = check_plain($matches[1]);
+    _db_api_remove_preg_match($docblock, $matches);
+  }
+
+  // Find and parse all HTML comments that start with "@" as DOXYGEN keywords.
+  if (preg_match_all("/<!--\\s?@([a-z]+)\\s?([^>]*)-->\n/s", $docblock['source'], $matches, PREG_SET_ORDER)) {
+    foreach ($matches as $match) {
+      _db_api_remove_preg_match($docblock, $match);
+      $keyword = $match[1];
+      $parts = array_filter(explode(' ', trim($match[2])));
+
+      switch ($keyword) {
+        // Handle group keyword definitions:
+        // <!-- @addtogroup machine_name -->
+        // <!-- @defgroup {machine_name} {title} -->
+        // <!-- @ingroup machine_name -->
+        case 'addtogroup':
+        case 'defgroup':
+        case 'ingroup':
+          $group = array_shift($parts);
+
+          // Add the group definition so API will parse it.
+          if ($keyword === 'defgroup') {
+            // Use the filename as the "group" name (if not explicitly set).
+            if (!$group) {
+              $group = strtolower($docblock['basename']);
+              $group = preg_replace('/\.md$/', '', $group);
+              $group = preg_replace('/\s+/', ' ', $group);
+              $group = preg_replace('/[^a-z0-9_]/', '_', $group);
+            }
+            // Extract the group title (only for @defgroup).
+            $group_title = check_plain(implode(' ', array_filter($parts)));
+            if (empty($group_title)) {
+              $group_title = $docblock['title'];
+            }
+            $docblock['content'] .= "@$keyword $group $group_title\n";
+          }
+          elseif ($group) {
+            if (!preg_match('/[a-zA-Z0-9_\.-]+/Us', $group)) {
+              $original_group = $group;
+              $group = preg_replace('/[^a-zA-Z0-9_\.-]/', '', $group);
+              watchdog('api', 'Invalid group specified for @@keyword in %file: "!original_group" Automatically converted to: "!group".', array(
+                '@keyword' => $keyword,
+                '%file' => $docblock['file_name'],
+                '!original_group' => $original_group,
+                '!group' => $group,
+              ), WATCHDOG_WARNING);
+
+            }
+            $docblock['content'] .= "@$keyword $group\n";
+          }
+          else {
+            watchdog('api', 'No group specified for @@keyword in %file.', array(
+              '@keyword' => $keyword,
+              '%file' => $docblock['file_name'],
+            ), WATCHDOG_WARNING);
+          }
+          break;
+
+        // Extract a summary via an HTML comment. While this is not a typically
+        // used "Drupal" DOXYGEN keyword, this is a markdown file and necessary:
+        // <!-- @summary description -->
+        case 'summary':
+          $docblock['summary'] = check_plain(implode(' ', $parts));
+          break;
+      }
+    }
+  }
+
+  // Trim remaining "source".
+  $docblock['source'] = trim($docblock['source']);
+
+  // Parse the markdown.
+  $parser = new ParsedownExtra();
+  $docblock['documentation'] = $parser->text($docblock['source']);
+  $docblock['code'] = $parser->text("```html\n" . $docblock['source'] . "\n```");
+
+  // Save the docblock.
+  api_save_documentation(array($docblock));
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function db_api_menu_alter(&$items) {
+  // The rest of the menu items require there to be at least one branch.
+  $branches = api_get_branches();
+  if (!count($branches)) {
+    return $items;
+  }
+  foreach ($branches as $branch) {
+    if (isset($items['api/' . $branch->project])) {
+      $items['api/' . $branch->project]['title'] = t('Documentation');
+    }
+  }
+}

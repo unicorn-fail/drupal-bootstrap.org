@@ -5,37 +5,6 @@
  */
 
 /**
- * Implements hook_api_parse_functions().
- */
-function db_markdown_api_parse_functions() {
-  return array(
-    'md' => '_db_markdown_parse_api_file',
-  );
-}
-
-/**
- * Callback for "md" file types parsed by the API module.
- *
- * @param array $docblock
- *   Array from api_parse_file() containing the file contents and information
- *   about the file, branch, etc.
- */
-function _db_markdown_parse_api_file(array $docblock) {
-  $parser = new ParsedownExtra();
-  $docblock['documentation'] = $parser->text($docblock['source']);
-  $title_pattern = "/^<h1[^>]*>([^<]*)<\/h1>\n?/i";
-  if (preg_match($title_pattern, $docblock['documentation'], $matches)) {
-    $docblock['title'] = $matches[1];
-    $docblock['documentation'] = preg_replace($title_pattern, '', $docblock['documentation']);
-  }
-  $output = htmlspecialchars($docblock['source']);
-  $output = api_number_lines($output);
-  $output = '<pre class="php"><code>' . $output . '</code></pre>';
-  $docblock['code'] = $output;
-  api_save_documentation(array($docblock));
-}
-
-/**
  * Implements hook_filter_info().
  */
 function db_markdown_filter_info() {

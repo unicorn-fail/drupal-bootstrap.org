@@ -1,0 +1,6 @@
+name = DB: API
+package = Drupal Bootstrap
+description = Provides API enhancements through out the site.
+core = 7.x
+dependencies[] = api
+dependencies[] = db_markdown
