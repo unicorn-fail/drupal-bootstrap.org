@@ -1,4 +1,4 @@
-name = Site
+name = DB: Site
 description = Site wide configuration
 core = 7.x
 package = Drupal Bootstrap

@@ -552,6 +552,10 @@ $conf['404_fast_html'] = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML+RDFa 1.0//EN"
  */
 # $conf['allow_authorize_operations'] = FALSE;
 
+
+// Disable breadcrumb alterations.
+$conf['menu_trail_by_path_breadcrumb_handling'] = 0;
+
 /**
  * Load local development override configuration, if available.
  *
