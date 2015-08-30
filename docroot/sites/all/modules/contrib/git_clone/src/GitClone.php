@@ -449,7 +449,9 @@ class GitClone extends \Entity {
         if (file_prepare_directory($temp_dir, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
           $temp_dir = drupal_realpath($temp_dir);
           drupal_register_shutdown_function(function () use ($temp_dir) {
-            file_unmanaged_delete_recursive($temp_dir);
+            if (file_exists($temp_dir)) {
+              file_unmanaged_delete_recursive($temp_dir);
+            }
           });
           try {
             $this->repository = Admin::init($temp_dir, FALSE, $options);
