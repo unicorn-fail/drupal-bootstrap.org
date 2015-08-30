@@ -23,6 +23,15 @@ regions[page_bottom] = Page bottom
 ; ========================================
 stylesheets[all][] = css/style.css
 
+; ========================================
+; Scripts
+; ========================================
+scripts[] = js/global.js
+
+; ========================================
+; Settings
+; ========================================
+settings[toggle_secondary_menu] = 0
 settings[bootstrap_fluid_container] = 1
 settings[bootstrap_region_well-sidebar_second] = 'well'
 settings[bootstrap_anchors_fix] = 0

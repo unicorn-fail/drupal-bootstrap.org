@@ -4,15 +4,24 @@
  * template.php
  */
 
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
 function bootstrap_subtheme_form_api_search_form_alter(&$form, &$form_state) {
+  _bootstrap_add_class('navbar-form', $form);
+  _bootstrap_add_class('navbar-right', $form);
+  _bootstrap_add_class('col-sm-3', $form);
+  $form['search']['#attributes']['placeholder'] = $form['search']['#title'];
   $form['search']['#input_group_button'] = TRUE;
+  $form['search']['#maxlength'] = NULL;
+  $form['search']['#size'] = 40;
+  $form['search']['#title_display'] = 'invisible';
 }
 
 /**
  * Implements hook_block_view_MODULE_DELTA_alter().
  */
 function bootstrap_subtheme_block_view_api_navigation_alter(&$data, $block) {
-  global $language_url;
   $branch = api_get_active_branch();
   if (user_access('access API reference') && !empty($branch)) {
     // Figure out if this is the default branch for this project, the same

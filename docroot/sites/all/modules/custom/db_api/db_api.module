@@ -4,13 +4,222 @@
  * db_api.module
  */
 
+/*****************************************************************************
+ * Private helper functions.
+ *****************************************************************************/
+
 /**
- * Implements hook_api_parse_functions().
+ * Re-formats the source "code" for API templates.
+ *
+ * Unfortunately the API module does not add links to the source code when it
+ * is saved to the database. This is likely due to reducing the parse execution
+ * time. This means that they are added during runtime and must be extracted
+ * here in the theme.
+ *
+ * @param object $object
+ *   The docblock object.
+ * @param string $code
+ *   The source code.
+ * @param bool $panel
+ *   Toggle determining whether or not to show the code in a collapsible panel.
+ *
+ * @return string
+ *   The re-formatted source code.
  */
-function db_api_api_parse_functions() {
-  return array(
-    'md' => '_db_api_parse_md_file',
+function _db_api_display_code($object, $code, $panel = TRUE) {
+  // Remove existing wrappers.
+  $code = preg_replace('/^\s*<pre[^>]*><code[^>]*>/', '', $code);
+  $code = preg_replace('/<\/code><\/pre>\s*$/', '', $code);
+
+  // Determine the code language from the filename.
+  $parts = explode('.', $object->file_name);
+  $ext = array_pop($parts);
+  if ($ext === 'md') {
+    $lang = 'markdown';
+  }
+  elseif ($ext === 'html') {
+    $lang = 'markup';
+  }
+  elseif ($ext === 'inc') {
+    $lang = 'php';
+  }
+  else {
+    $lang = $ext;
+  }
+
+  // Extract the links provided by the API module.
+  $links = _db_api_extract_links($code);
+
+  // Construct the code tag.
+  $code = array(
+    '#theme' => 'html_tag__api__source__code',
+    '#tag' => 'code',
+    '#attributes' => array(
+      'class' => array("language-$lang"),
+    ),
+    '#value' => $lang === 'markdown' ? htmlentities($code) : $code,
   );
+
+  // Construct the build array.
+  $build = array(
+    'source' => array(
+      '#theme' => 'html_tag__api__source',
+      '#tag' => 'pre',
+      '#attributes' => array(
+        'class' => array('line-numbers', 'fade'),
+        'data-links' => drupal_json_encode($links),
+        'data-line' => '',
+        'id' => drupal_html_id('code'),
+      ),
+      '#value' => drupal_render($code),
+    ),
+  );
+
+  // Offset the start line for numbering.
+  if (!empty($object->start_line)) {
+    $build['source']['#attributes']['data-start'] = $object->start_line;
+    $build['source']['#attributes']['data-line-offset'] = $object->start_line - 1;
+  }
+
+  // Wrap it with a panel if necessary.
+  if ($panel) {
+    $build['#theme_wrappers'] = array('fieldset__api__file_source');
+    $build['#title'] = t('View source');
+    $build['#collapsible'] = TRUE;
+    $build['#collapsed'] = TRUE;
+    $build['#id'] = 'file-source';
+  }
+
+  // Build the re-formatted source code.
+  return drupal_render($build);
+}
+
+/**
+ * Re-formats the "documentation" for API templates.
+ *
+ * @param object $object
+ *   The docblock object.
+ * @param string $documentation
+ *   The documentation string.
+ *
+ * @return string
+ *   The re-formatted documentation.
+ */
+function _db_api_display_documentation($object, $documentation = NULL) {
+  // Normalize the documentation.
+  $documentation = _db_api_replace_alerts($documentation);
+
+  // Do not double process markdown files.
+  if (!preg_match('/\.md$/', $object->file_name)) {
+    // Normalize the documentation.
+    $documentation = _db_api_normalize_string($documentation);
+
+    // Format the documentation for markdown.
+    $documentation = db_markdown_parse_text($documentation);
+  }
+
+  return $documentation;
+}
+
+function _db_api_replace_alerts($string) {
+  if (preg_match_all('/<p[^>]*>(warning|danger|info|note|notice): ([\w\W]+)<\/p>/Ui', $string, $matches, PREG_SET_ORDER)) {
+    foreach ($matches as $match) {
+      $type = strtolower($match[1]);
+      if ($type === 'note' || $type === 'notice') {
+        $class = 'info';
+      }
+      else {
+        $class = $type;
+      }
+      $build = array(
+        '#theme_wrappers' => array('container__alert__' . $class),
+        '#attributes' => array(),
+        0 => array(
+          '#markup' => db_markdown_parse_text('<strong>' . ucfirst($type) . ':</strong> ' . $match[2]),
+        ),
+      );
+      $string = str_replace($match[0], drupal_render($build), $string);
+    }
+  }
+  return $string;
+}
+
+/**
+ * Re-formats the "See Also" for API templates.
+ *
+ * @param string $see
+ *   The $see string provided in the API template.
+ *
+ * @return string
+ *   The re-formatted "See Also" list.
+ */
+function _db_api_display_see_also($see) {
+  $build = array();
+  if ($items = _db_api_normalize_string($see, TRUE, TRUE)) {
+    $build = array(
+      '#theme_wrappers' => array('container__alert__info'),
+      '#theme' => 'item_list__alert',
+      '#title' => t('See Also'),
+      '#items' => $items,
+    );
+  }
+  return drupal_render($build);
+}
+
+/**
+ * Extracts the links added by the API module.
+ *
+ * @param string $code
+ *   The source code.
+ */
+function _db_api_extract_links($code) {
+  global $base_url;
+  $links = array();
+  if (preg_match_all('/<a [^>]+>[^<]+<\/a>/', $code, $matches, PREG_SET_ORDER)) {
+    foreach ($matches as $match) {
+      $link = (array) new SimpleXMLIterator($match[0]);
+      $title = $link[0];
+      if (!isset($links[$title])) {
+        foreach ($link['@attributes'] as $name => &$value) {
+          if ($name === 'href') {
+            $value = url(urldecode($value), array('absolute' => TRUE));
+            if (strpos($value, $base_url) === FALSE) {
+              $link['@attributes']['target'] = '_blank';
+            }
+            else {
+              $value = str_replace($base_url, '', $value);
+            }
+          }
+          if (empty($value)) {
+            unset($link['@attributes'][$name]);
+          }
+        }
+        $links[$title] = $link['@attributes'];
+      }
+    }
+  }
+  return $links;
+}
+
+/**
+ * Normalizes text output from the API module.
+ *
+ * @param string $string
+ *   The string to normalize.
+ * @param bool $remove_autop
+ *   Toggle determining whether or not to remove the <p> tags injected by API.
+ * @param bool $array
+ *   Toggle determining whether or not to split the string by newline.
+ *
+ * @return string|array
+ *   The normalized string or array of strings if $array is set to TRUE.
+ */
+function _db_api_normalize_string($string, $remove_autop = TRUE, $array = FALSE) {
+  $string = html_entity_decode(decode_entities($string));
+  if ($remove_autop) {
+    $string = preg_replace('/(<p[^>]*>)/', '', preg_replace('/<\/p>/', "\n", $string));
+  }
+  return $array ? array_filter(explode("\n", $string)) : $string;
 }
 
 /**
@@ -26,6 +235,38 @@ function _db_api_remove_preg_match(array &$docblock, array $matches) {
   $docblock['source'] = preg_replace('/' . preg_quote($matches[0]) . '/Us', '', $docblock['source']);
 }
 
+/*****************************************************************************
+ * Hooks and alters.
+ *****************************************************************************/
+
+/**
+ * Implements hook_api_parse_functions_alter().
+ */
+function db_api_api_parse_functions_alter(array &$parse_functions) {
+  $parse_functions['md'] = 'db_api_parse_md_file';
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function db_api_menu_alter(&$items) {
+  // The rest of the menu items require there to be at least one branch.
+  $branches = api_get_branches();
+  if (!count($branches)) {
+    return $items;
+  }
+  foreach ($branches as $branch) {
+    if (isset($items['api/' . $branch->project])) {
+      $items['api/' . $branch->project]['title'] = t('Documentation');
+    }
+  }
+}
+
+/*****************************************************************************
+ * Callbacks functions.
+ *****************************************************************************/
+
+
 /**
  * Callback for parsing "md" file types.
  *
@@ -33,7 +274,7 @@ function _db_api_remove_preg_match(array &$docblock, array $matches) {
  *   Array from api_parse_file() containing the file contents and information
  *   about the file, branch, etc.
  */
-function _db_api_parse_md_file(array $docblock) {
+function db_api_parse_md_file(array $docblock) {
   $docblock['start_line'] = 0;
 
   // API uses the file basename as the title by default. Attempt to find the
@@ -108,30 +349,12 @@ function _db_api_parse_md_file(array $docblock) {
     }
   }
 
-  // Trim remaining "source".
-  $docblock['source'] = trim($docblock['source']);
+  // Parse the documentation.
+  $docblock['documentation'] = db_markdown_parse_text($docblock['source']);
 
-  // Parse the markdown.
-  $parser = new ParsedownExtra();
-  $docblock['documentation'] = $parser->text($docblock['source']);
-  $docblock['code'] = $parser->text("```html\n" . $docblock['source'] . "\n```");
+  // Wrap the source code.
+  $docblock['code'] = '<pre class="php"><code>' . $docblock['source'] . '</code></pre>';
 
   // Save the docblock.
   api_save_documentation(array($docblock));
-}
-
-/**
- * Implements hook_menu_alter().
- */
-function db_api_menu_alter(&$items) {
-  // The rest of the menu items require there to be at least one branch.
-  $branches = api_get_branches();
-  if (!count($branches)) {
-    return $items;
-  }
-  foreach ($branches as $branch) {
-    if (isset($items['api/' . $branch->project])) {
-      $items['api/' . $branch->project]['title'] = t('Documentation');
-    }
-  }
 }

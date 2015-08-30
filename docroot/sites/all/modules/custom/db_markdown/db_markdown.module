@@ -10,18 +10,27 @@
 function db_markdown_filter_info() {
   $filters['parsedown_extra'] = array(
     'title' => t('ParsedownExtra'),
-    'process callback' => '_db_markdown_filter_process',
+    'process callback' => 'db_markdown_parse_text',
     'tips callback' => '_db_markdown_filter_tip',
   );
   return $filters;
 }
 
 /**
- * Callback for processing the "parsedown_extra" filter.
+ * Parses a string with the Parsedown Extra library.
+ *
+ * @param string $string
+ *   The string to parse.
+ *
+ * @return string
+ *   The parsed string.
  */
-function _db_markdown_filter_process($text) {
-  $parser = new ParsedownExtra();
-  return $parser->text($text);
+function db_markdown_parse_text($string) {
+  static $parsedown;
+  if (!isset($parsedown)) {
+    $parsedown = new ParsedownExtra();
+  }
+  return $parsedown->text($string);
 }
 
 /**
