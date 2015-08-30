@@ -522,18 +522,12 @@ class GitClone extends \Entity {
    *   The timestamp of the last fetch or 0 if no timestamp has been recorded.
    */
   public function lastFetched($timestamp = NULL) {
-    $cid = 'gitclone:last_fetched';
-    $last_fetched = array();
-
-    // Retrieve cached last fetched data.
-    if (($cache = cache_get($cid)) && isset($cache->data)) {
-      $last_fetched = $cache->data;
-    }
+    $last_fetched = (array) variable_get('gitclone_last_fetched', array());
 
     // Set the timestamp.
     if ($timestamp) {
       $last_fetched[$this->name] = $timestamp;
-      cache_set($cid, $last_fetched);
+      variable_set('gitclone_last_fetched', $last_fetched);
     }
     elseif (!isset($last_fetched[$this->name])) {
       $last_fetched[$this->name] = 0;
