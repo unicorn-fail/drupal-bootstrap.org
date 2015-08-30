@@ -1,0 +1,26 @@
+From 6067f05f2c0b016f20291d6eb131c118809cfd03 Mon Sep 17 00:00:00 2001
+From: Mark Carver <mark.carver@me.com>
+Date: Sun, 30 Aug 2015 07:14:35 -0500
+Subject: [PATCH] Issue #2560017 by markcarver: Undefined property:
+ stdClass::$preferred in _api_make_match_link()
+
+---
+ api.formatting.inc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/api.formatting.inc b/api.formatting.inc
+index 0f4a9b1..f5506bc 100644
+--- a/api.formatting.inc
++++ b/api.formatting.inc
+@@ -829,7 +829,7 @@ function _api_make_match_link($name, $namespaced_name, $text, $type, $try_link =
+   foreach ($results as $object) {
+     // MySQL is not case-sensitive, so check the match for exact string.
+     $matched = $object->match_name;
+-    if (!in_array($matched, $potential_names)) {
++    if (!in_array($matched, $potential_names) || !isset($object->preferred)) {
+       continue;
+     }
+ 
+-- 
+2.3.2 (Apple Git-55)
+
