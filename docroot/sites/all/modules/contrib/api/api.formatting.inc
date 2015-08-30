@@ -829,7 +829,7 @@ function _api_make_match_link($name, $namespaced_name, $text, $type, $try_link =
   foreach ($results as $object) {
     // MySQL is not case-sensitive, so check the match for exact string.
     $matched = $object->match_name;
-    if (!in_array($matched, $potential_names) || !isset($object->preferred)) {
+    if (!in_array($matched, $potential_names)) {
       continue;
     }
 
