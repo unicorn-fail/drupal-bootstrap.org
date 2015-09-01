@@ -3097,21 +3097,26 @@ function api_should_queue($branch) {
 /**
  * Returns the list of parsing functions for file extensions.
  *
- * @return array
+ * @return
  *   An associative array whose keys are file extensions, and whose values are
- *   the functions used to parse files with that extension.
+ *   the functions used to parse files with that extension. The function should
+ *   parse the contents of the file, and save one or more documentation objects
+ *   in the database. The function argument is a $docblock array, containing a
+ *   sample documentation listing for the file as a whole. In this array, the
+ *   following keys are filled in:
+ *   - object_name, file_name: Both set to the file name.
+ *   - title, basename: Both set to the file basename.
+ *   - modified: Set to the time the file was last modified.
+ *   - branch: The branch object.
+ *   - object_type: Set to 'file'.
+ *   - source: Set to the file contents.
+ *   - is_drupal: TRUE if this is a Drupal file, as defined by the regular
+ *     expression for deciding this that is part of the branch setup.
+ *
+ * @see api_save_documentation()
  */
 function api_parse_functions() {
-  $parse_functions = module_invoke_all('api_parse_functions');
-  drupal_alter('api_parse_functions', $parse_functions);
-  return $parse_functions;
-}
-
-/**
- * Implements hook_api_parse_functions().
- */
-function api_api_parse_functions() {
-  return array(
+  $functions = array(
     'php' => 'api_parse_php_file',
     'module' => 'api_parse_php_file',
     'inc' => 'api_parse_php_file',
@@ -3132,6 +3137,9 @@ function api_api_parse_functions() {
     'htm' => 'api_parse_html_file',
     'html' => 'api_parse_html_file',
   );
+
+  drupal_alter('api_parse_functions', $functions);
+  return $functions;
 }
 
 /**
