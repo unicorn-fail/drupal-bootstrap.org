@@ -4,6 +4,22 @@
  * db_markdown.module
  */
 
+use Drupal\DBMarkdown\DBMarkdown;
+
+/**
+ * Remove an entire preg_match string from a string.
+ *
+ * @param string $string
+ *   The string to remove match from, passed by reference.
+ * @param array $matches
+ *   The matches from preg_match.
+ * @param string $replace
+ *   The string to replace match with.
+ */
+function _db_markdown_replace_preg_match(&$string, array $matches, $replace = '') {
+  $string = preg_replace('/' . preg_quote($matches[0], '/') . '/Us', $replace, $string);
+}
+
 /**
  * Implements hook_filter_info().
  */
@@ -28,7 +44,7 @@ function db_markdown_filter_info() {
 function db_markdown_parse_text($string) {
   static $parsedown;
   if (!isset($parsedown)) {
-    $parsedown = new ParsedownExtra();
+    $parsedown = new DBMarkdown();
   }
   return $parsedown->text($string);
 }

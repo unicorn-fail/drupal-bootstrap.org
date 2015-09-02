@@ -9,6 +9,47 @@
  *****************************************************************************/
 
 /**
+ * Retrieves the active API docblock object.
+ *
+ * @return object|void
+ *   The active API docblock object or NULL if not an API page.
+ */
+function _db_api_active_item() {
+  static $item;
+  if (!isset($item)) {
+    if ($item = menu_get_object('api_item', 4)) {
+      if ($item->object_type === 'group') {
+        $query = db_select('api_reference_storage', 'r');
+        $results = $query
+          ->fields('r')
+          ->condition('r.from_did', $item->did)
+          ->execute()
+          ->fetchAllAssoc('from_did');
+        $item->subgroup = !empty($results);
+      }
+    }
+    elseif ($item = menu_get_object('api_filename', 2)) {
+      // Just return the item.
+    }
+    elseif (($branch = api_get_active_branch()) && (current_path() === "api/$branch->project" || current_path() === "api/$branch->project/$branch->branch_name")) {
+      $item = db_select('api_documentation', 'd')
+        ->fields('d')
+        ->condition('branch_id', $branch->branch_id)
+        ->condition('object_type', 'mainpage')
+        ->execute()
+        ->fetchObject();
+      if ($item) {
+        api_set_html_page_title(check_plain($item->title));
+      }
+    }
+    else {
+      $item = FALSE;
+    }
+  }
+  return $item;
+}
+
+/**
  * Re-formats the source "code" for API templates.
  *
  * Unfortunately the API module does not add links to the source code when it
@@ -34,21 +75,34 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
   // Determine the code language from the filename.
   $parts = explode('.', $object->file_name);
   $ext = array_pop($parts);
-  if ($ext === 'md') {
-    $lang = 'markdown';
-  }
-  elseif ($ext === 'html') {
-    $lang = 'markup';
-  }
-  elseif ($ext === 'inc') {
-    $lang = 'php';
-  }
-  else {
-    $lang = $ext;
+  switch ($ext) {
+    case 'markdown':
+    case 'md':
+      $lang = 'markdown';
+      break;
+
+    case 'htm':
+    case 'html':
+      $lang = 'markup';
+      break;
+
+    case 'php':
+    case 'module':
+    case 'inc':
+    case 'install':
+    case 'engine':
+    case 'theme':
+    case 'profile':
+    case 'test':
+      $lang = 'php';
+      break;
+
+    default:
+      $lang = 'none';
   }
 
   // Extract the links provided by the API module.
-  $links = _db_api_extract_links($code);
+  $links = _db_api_process_links($code);
 
   // Construct the code tag.
   $code = array(
@@ -69,7 +123,7 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
         'class' => array('line-numbers', 'fade'),
         'data-links' => drupal_json_encode($links),
         'data-line' => '',
-        'id' => drupal_html_id('code'),
+        'id' => drupal_html_id('source'),
       ),
       '#value' => drupal_render($code),
     ),
@@ -84,10 +138,10 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
   // Wrap it with a panel if necessary.
   if ($panel) {
     $build['#theme_wrappers'] = array('fieldset__api__file_source');
-    $build['#title'] = t('View source');
+    $build['#title'] = t('Source');
     $build['#collapsible'] = TRUE;
-    $build['#collapsed'] = TRUE;
-    $build['#id'] = 'file-source';
+    $build['#collapsed'] = !($object->object_type === 'file' && preg_match('/\.tpl\.php$/', $object->file_name));
+    $build['#id'] = 'source-wrapper';
   }
 
   // Build the re-formatted source code.
@@ -111,11 +165,20 @@ function _db_api_display_documentation($object, $documentation = NULL) {
 
   // Do not double process markdown files.
   if (!preg_match('/\.md$/', $object->file_name)) {
+    if (preg_match_all('/<pre[^>]*><code[^>]*>([\w\W]*)<\/code><\/pre>/', $documentation, $matches, PREG_SET_ORDER)) {
+      foreach ($matches as $match) {
+        $documentation = preg_replace('/' . preg_quote($match[0], '/') . '/', "```php\n" . strip_tags($match[1]) . "\n```\n", $documentation);
+      }
+    }
+
     // Normalize the documentation.
     $documentation = _db_api_normalize_string($documentation);
 
     // Format the documentation for markdown.
     $documentation = db_markdown_parse_text($documentation);
+
+    // Process the links.
+    _db_api_process_links($documentation, TRUE);
   }
 
   return $documentation;
@@ -155,6 +218,7 @@ function _db_api_replace_alerts($string) {
  */
 function _db_api_display_see_also($see) {
   $build = array();
+  _db_api_process_links($see, TRUE);
   if ($items = _db_api_normalize_string($see, TRUE, TRUE)) {
     $build = array(
       '#theme_wrappers' => array('container__alert__info'),
@@ -167,12 +231,60 @@ function _db_api_display_see_also($see) {
 }
 
 /**
+ * Extracts the group and parent groups (if applicable) from a docblock.
+ *
+ * @param array $docblock
+ *   The docblock array.
+ * @param bool $parent_only
+ *   Toggle determining whether or not to just return the parent group.
+ *
+ * @return string|FALSE
+ *   The group or parent group. FALSE on error.
+ */
+function _db_api_find_group(array $docblock, $parent_only = FALSE) {
+  $filename = preg_replace('/^(documentation|docs|doc)?\/?/', '', $docblock['file_name']);
+  $paths = explode('/', $filename);
+  $file = preg_replace('/\.md$/i', '', array_pop($paths));
+  $parent_group = implode('_', $paths);
+  if (empty($parent_group)) {
+    $parent_group = FALSE;
+  }
+  elseif ($parent_only) {
+    return $parent_group;
+  }
+
+  // If the file is named "readme" and it's located in a sub-directory (a.k.a.
+  // $parent_group), then use it as the group name.
+  if (preg_match('/^readme$/i', $file)) {
+    if ($parent_group) {
+      $group = $parent_group;
+      $parent_group = FALSE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    $group = strtolower($file);
+    $group = preg_replace('/\s+/', ' ', $group);
+    $group = preg_replace('/[^a-z0-9_]/', '_', $group);
+  }
+  return $parent_group ? $parent_group . '_' . $group : $group;
+}
+
+/**
  * Extracts the links added by the API module.
  *
  * @param string $code
- *   The source code.
+ *   The source code, passed by reference.
+ * @param bool $replace
+ *   Toggle determining whether or not to replace the links found.
+ *
+ * @return array
+ *   An array of extracted links where attributes are the values, keyed by
+ *   the link display text.
  */
-function _db_api_extract_links($code) {
+function _db_api_process_links(&$code, $replace = FALSE) {
   global $base_url;
   $links = array();
   if (preg_match_all('/<a [^>]+>[^<]+<\/a>/', $code, $matches, PREG_SET_ORDER)) {
@@ -193,6 +305,9 @@ function _db_api_extract_links($code) {
           if (empty($value)) {
             unset($link['@attributes'][$name]);
           }
+        }
+        if ($replace) {
+          _db_markdown_replace_preg_match($code, $match, '<a ' . drupal_attributes($link['@attributes']) . ">$title</a>");
         }
         $links[$title] = $link['@attributes'];
       }
@@ -222,19 +337,6 @@ function _db_api_normalize_string($string, $remove_autop = TRUE, $array = FALSE)
   return $array ? array_filter(explode("\n", $string)) : $string;
 }
 
-/**
- * Remove an entire preg_match string from a docblock source string.
- *
- * @param array $docblock
- *   Array from api_parse_file() containing the file contents and information
- *   about the file, branch, etc. Passed by reference.
- * @param array $matches
- *   The matches from preg_match.
- */
-function _db_api_remove_preg_match(array &$docblock, array $matches) {
-  $docblock['source'] = preg_replace('/' . preg_quote($matches[0]) . '/Us', '', $docblock['source']);
-}
-
 /*****************************************************************************
  * Hooks and alters.
  *****************************************************************************/
@@ -259,13 +361,13 @@ function db_api_menu_alter(&$items) {
     if (isset($items['api/' . $branch->project])) {
       $items['api/' . $branch->project]['title'] = t('Documentation');
     }
+    $items['api/' . $branch->project . '/' . $branch->branch_name]['type'] = MENU_NORMAL_ITEM;
   }
 }
 
 /*****************************************************************************
  * Callbacks functions.
  *****************************************************************************/
-
 
 /**
  * Callback for parsing "md" file types.
@@ -275,23 +377,48 @@ function db_api_menu_alter(&$items) {
  *   about the file, branch, etc.
  */
 function db_api_parse_md_file(array $docblock) {
+  // Reference the original source.
+  $source = $docblock['source'];
+  $documentation = $source;
+
+  // Set start_line to 0 initially.
   $docblock['start_line'] = 0;
 
   // API uses the file basename as the title by default. Attempt to find the
   // first H1 (#) in the file and use that as the title instead.
-  if (preg_match("/# ([^\n]+)\n/Us", $docblock['source'], $matches)) {
+  if (preg_match("/# ([^\n]+)\n/Us", $source, $matches)) {
     $docblock['title'] = check_plain($matches[1]);
-    _db_api_remove_preg_match($docblock, $matches);
+
+    // Remove the title from the documentation (as it's set as the page title).
+    _db_markdown_replace_preg_match($documentation, $matches);
+
+    // Use the title as the start_line point.
+    $line = array_search(trim($matches[0]), explode("\n", $source));
+    if ($line !== FALSE) {
+      $docblock['start_line'] = $line + 1;
+    }
   }
 
   // Find and parse all HTML comments that start with "@" as DOXYGEN keywords.
-  if (preg_match_all("/<!--\\s?@([a-z]+)\\s?([^>]*)-->\n/s", $docblock['source'], $matches, PREG_SET_ORDER)) {
+  if (preg_match_all("/<!--\\s?@([a-z]+)\\s?([^>]*)-->\n/s", $source, $matches, PREG_SET_ORDER)) {
     foreach ($matches as $match) {
-      _db_api_remove_preg_match($docblock, $match);
+      // Remove these from both the original source and the documentation.
+      _db_markdown_replace_preg_match($documentation, $match);
+      _db_markdown_replace_preg_match($source, $match);
+
       $keyword = $match[1];
       $parts = array_filter(explode(' ', trim($match[2])));
-
       switch ($keyword) {
+        // Handle <!-- @mainpage {title} --> definition.
+        case 'mainpage':
+          // Extract the title.
+          $title = check_plain(implode(' ', array_filter($parts)));
+          if (empty($title)) {
+            $title = $docblock['title'];
+          }
+          $docblock['content'] .= "@mainpage $title\n";
+          break;
+
         // Handle group keyword definitions:
         // <!-- @addtogroup machine_name -->
         // <!-- @defgroup {machine_name} {title} -->
@@ -301,15 +428,14 @@ function db_api_parse_md_file(array $docblock) {
         case 'ingroup':
           $group = array_shift($parts);
 
+          // If no group was explicitly specified, attempt to dynamically
+          // extract the group based on the filename and path.
+          if (!$group) {
+            $group = _db_api_find_group($docblock, $keyword !== 'defgroup');
+          }
+
           // Add the group definition so API will parse it.
           if ($keyword === 'defgroup') {
-            // Use the filename as the "group" name (if not explicitly set).
-            if (!$group) {
-              $group = strtolower($docblock['basename']);
-              $group = preg_replace('/\.md$/', '', $group);
-              $group = preg_replace('/\s+/', ' ', $group);
-              $group = preg_replace('/[^a-z0-9_]/', '_', $group);
-            }
             // Extract the group title (only for @defgroup).
             $group_title = check_plain(implode(' ', array_filter($parts)));
             if (empty($group_title)) {
@@ -350,10 +476,10 @@ function db_api_parse_md_file(array $docblock) {
   }
 
   // Parse the documentation.
-  $docblock['documentation'] = db_markdown_parse_text($docblock['source']);
+  $docblock['documentation'] = db_markdown_parse_text($documentation);
 
   // Wrap the source code.
-  $docblock['code'] = '<pre class="php"><code>' . $docblock['source'] . '</code></pre>';
+  $docblock['code'] = '<pre class="php"><code>' . $source . '</code></pre>';
 
   // Save the docblock.
   api_save_documentation(array($docblock));

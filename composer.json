@@ -12,6 +12,9 @@
     "prefer-stable": true,
     "autoload": {
         "psr-4": {
+            "Drupal\\DBMarkdown\\": [
+                "docroot/sites/all/modules/custom/db_markdown/src"
+            ],
             "Drupal\\GitClone\\": [
                 "docroot/sites/all/modules/contrib/git_clone/src"
             ]
