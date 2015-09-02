@@ -556,6 +556,40 @@ $conf['404_fast_html'] = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML+RDFa 1.0//EN"
 // Disable breadcrumb alterations.
 $conf['menu_trail_by_path_breadcrumb_handling'] = 0;
 
+// Admin Menu.
+$conf['admin_menu_cache_client'] = FALSE;
+
+// jQuery Update.
+$conf['jquery_update_jquery_cdn'] = 'none';
+$conf['jquery_update_jquery_version'] = '1.10';
+$conf['jquery_update_jquery_admin_version'] = '1.10';
+$conf['jquery_update_compression_type'] = 'min';
+
+// AdvAgg JS aggregation settings.
+$conf['advagg_bundler_max_js'] = 1;
+$conf['advagg_js_compressor'] = 1;
+$conf['advagg_js_inline_compressor'] = 1;
+$conf['advagg_mod_js_adjust_sort_inline'] = TRUE;
+$conf['advagg_mod_js_footer'] = 2;
+$conf['advagg_mod_js_head_extract'] = TRUE;
+$conf['advagg_mod_js_preprocess'] = TRUE;
+
+// AdvAgg CSS aggregation settings.
+$conf['advagg_bundler_max_css'] = 1;
+$conf['advagg_combine_css_media'] = TRUE;
+$conf['advagg_css_compressor'] = 2;
+$conf['advagg_css_inline_compressor'] = 2;
+$conf['advagg_mod_css_head_extract'] = TRUE;
+$conf['advagg_mod_css_preprocess'] = TRUE;
+
+// Core settings.
+$conf['cache'] = 1;
+$conf['block_cache'] = 1;
+$conf['cache_lifetime'] = 3600;
+$conf['page_cache_maximum_age'] = 43200;
+$conf['preprocess_css'] = 1;
+$conf['preprocess_js'] = 1;
+
 /**
  * Load local development override configuration, if available.
  *
