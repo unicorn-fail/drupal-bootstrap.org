@@ -102,10 +102,15 @@
         var $token = $(this);
         var text = $token.html().replace(/^('|")/g, '').replace(/('|")$/g, '');
         if (links[text]) {
+          if (links[text].title) links[text]['data-toggle'] = 'tooltip';
           var $link = $('<a>').text(text).attr(links[text]);
           $token.html($token.html().replace(new RegExp(text, 'g'), $link.wrap('<div>').parent().html()));
         }
       });
+      var options = $.extend(true, {}, Drupal.settings.bootstrap.tooltipOptions, {
+        placement: 'bottom'
+      });
+      $pre.find('[data-toggle="tooltip"]').tooltip(options);
     }
 
     // Bind on hashchange event to offset the scrolltop a bit.
