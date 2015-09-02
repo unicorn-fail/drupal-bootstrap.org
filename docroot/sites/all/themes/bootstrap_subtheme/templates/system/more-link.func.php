@@ -13,6 +13,9 @@
  *   - title: A descriptive verb for the link, like 'Read more'.
  */
 function bootstrap_subtheme_more_link(array $variables) {
+  if (preg_match('/^aggregator/', $variables['url'])) {
+    return '';
+  }
   $output = '<div class="more-link">';
   $output .= l(t('More'), $variables['url'], array(
     'attributes' => array(

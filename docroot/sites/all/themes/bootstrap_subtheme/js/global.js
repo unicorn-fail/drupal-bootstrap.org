@@ -58,13 +58,28 @@
   Prism.hooks.add('before-highlight', function(env) {
     var pre = env.element.parentNode;
     if (!pre || !/pre/i.test(pre.nodeName)) return;
+    var language;
     if (/^json/i.test(env.language)) {
-      pre.setAttribute('data-language', 'JSON');
+      language = 'JSON';
     }
     else if (/^(htm|html|markup)/i.test(env.language)) {
-      pre.setAttribute('data-language', 'HTML');
+      language = 'HTML';
+    }
+    else {
+      language = pre.getAttribute('data-language');
+      pre.removeAttribute('data-language');
+    }
+    if (language) {
+      $(pre).wrap('<div class="prism-wrapper" data-language="' + language + '">');
     }
   });
+
+  var sourceHash = function () {
+    var hash = location.hash.slice(1);
+    var range = (hash.match(/\.([\d,-]+)$/) || [,''])[1];
+    if (!range || document.getElementById(hash)) return;
+    return '#' + hash.slice(0, hash.lastIndexOf('.'));
+  };
 
   // Process "after-highlight" event.
   Prism.hooks.add('after-highlight', function (env) {
@@ -93,21 +108,9 @@
       });
     }
 
-    // Show the code block (if hidden).
-    if ($pre.hasClass('fade')) {
-      $pre.addClass('in');
-    }
-
-    var getHashId = function () {
-      var hash = location.hash.slice(1);
-      var range = (hash.match(/\.([\d,-]+)$/) || [,''])[1];
-      if (!range || document.getElementById(hash)) return;
-      return '#' + hash.slice(0, hash.lastIndexOf('.'));
-    };
-
     // Bind on hashchange event to offset the scrolltop a bit.
     $window.on('hashchange', function () {
-      var $highlight = $(getHashId()).find('.temporary.line-highlight');
+      var $highlight = $(sourceHash()).find('.temporary.line-highlight');
       if (!$highlight[0]) return;
       var newTop = $window.scrollTop() - 100;
       if (newTop < 0) newTop = 0;
@@ -115,7 +118,7 @@
     });
 
     // This is currently in a DOM ready event (page load), so if there is a hash ID present, go ahead and trigger it.
-    if (getHashId()) {
+    if (sourceHash()) {
       // The Prism line-highlight plugin binds directly with addEventListener (which jQuery does not trigger).
       // We must manually trigger it via the window object.
       var triggerHashchange = function () {
@@ -135,9 +138,53 @@
     }
   });
 
+  Prism.hooks.add('complete', function (env) {
+    var pre = env.element.parentNode;
+    if (!pre || !/pre/i.test(pre.nodeName)) return;
+
+    // Show the code block (if hidden).
+    var $pre = $(pre);
+    if ($pre.hasClass('fade')) {
+      $pre.addClass('in');
+    }
+  });
+
   // DOM ready.
-  $(document).ready(function () {
+  var $document = $(document);
+  $document.ready(function () {
+    var $body = $('body');
+    var $footer = $body.find('.footer');
+    var $sidebar = $body.find('.region-sidebar-second');
+
+    // Affix the sidebar.
+    $sidebar.affix({
+      offset: {
+        top: $sidebar.offset().top - 40,
+        bottom: function () {
+          return (this.bottom = $footer.outerHeight(true));
+        }
+      }
+    });
+
+    // Highlight code on page.
     Prism.highlightAll();
+
+    // Set default anchor options.
+    $.fn.anchor.Constructor.DEFAULTS = $.extend(true, $.fn.anchor.Constructor.DEFAULTS, {
+      anchors: '.region-content h2, .region-content h3, .region-content h4, [data-anchor]',
+      anchorIgnore: '.element-invisible, button, [data-anchor-ignore]:not([data-anchor-ignore="false"]),[data-dismiss],[data-slide],[data-toggle]:not([data-toggle="anchor"])'
+    });
+
+    // If there is a source hash (line highlighting), don't bind immediately.
+    if (sourceHash()) {
+      setTimeout(function () {
+        $document.anchor();
+      }, 300)
+    }
+    else {
+      $document.anchor();
+    }
+
   });
 
 

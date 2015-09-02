@@ -27,7 +27,6 @@
 <?php print $related_topics ?>
 <?php } ?>
 
-<h3><?php print t('File'); ?></h3>
-<?php print $defined; ?>
+<h3><?php print t('Source'); ?><?php print $defined; ?></h3>
 
 <?php print $objects; ?>

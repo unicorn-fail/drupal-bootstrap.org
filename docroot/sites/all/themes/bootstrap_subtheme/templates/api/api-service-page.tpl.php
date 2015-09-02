@@ -52,7 +52,4 @@ foreach ($call_links as $link) {
   print $link;
 } ?>
 
-<h3><?php print t('File'); ?></h3>
-<?php print $defined; ?>
-
 <?php print _db_api_display_code($object, $code); ?>

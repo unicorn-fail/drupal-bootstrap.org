@@ -2,18 +2,37 @@
  * Styles for the Bootstrap Subtheme theme.
  */
 
+a[target="_blank"]:after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #aaa;
+  content: "\e164";
+  display: inline-block;
+  font-family: 'Glyphicons Halflings';
+  font-size: 75%;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  margin-left: .25em;
+  position: relative;
+  top: 1px;
+}
+
 ul, ol {
   padding-left: 2em;
   word-break: break-word;
 }
 
 .page-header .label {
-  font-size: 14px;
+  font-size: 50%;
   display: inline-block;
   position: relative;
-  top: -4px;
+  top: -0.3em;
 }
 
+.region-content {
+  min-height: 325px;
+}
 .sidebar.second-top {
   margin-bottom: 30px;
 }
@@ -23,6 +42,35 @@ ul, ol {
     margin-right: -30px;
   }
 }
+
+h3 small code {
+  font-size: 75%;
+  position: relative;
+  top: -.25em;
+}
+
+.region-sidebar-second.affix {
+  position: fixed !important;
+  top: 40px;
+}
+@media (min-width: 768px) {
+  .region-sidebar-second.affix {
+    width: 154px;
+  }
+}
+@media (min-width: 992px) {
+  .region-sidebar-second.affix {
+    width: 213px;
+  }
+}
+@media (min-width: 1200px) {
+  .region-sidebar-second.affix {
+    width: 263px;
+  }
+}
+
+
+
 
 /**
  * API Overrides.
@@ -36,18 +84,57 @@ ul, ol {
   vertical-align: top;
 }
 
+
+
+
 /**
  * Prism Syntax Highlighting Overrides.
  */
+.prism-wrapper {
+  position: relative;
+}
+.prism-wrapper[data-language]::before {
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  -webkit-transform: none;
+  -moz-transform: none;
+  -ms-transform: none;
+  -o-transform: none;
+  transform: none;
+  content: attr(data-language);
+  color: rgba(0,0,0,.35);
+  background: #DDDAD8;
+  border-bottom: 1px solid #ccc;
+  border-left: 1px solid #ccc;
+  border-radius: 0 3px 0 5px;
+  bottom: auto;
+  display: inline-block;
+  font-family: Menlo, Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  height: auto;
+  left: auto;
+  top: 1px;
+  right: 1px;
+  padding: 0 0.5em;
+  position: absolute;
+  text-shadow: none;
+  width: auto;
+  z-index: 1;
+}
+pre.line-numbers > code {
+  display: inline-block;
+  padding-right: 1em;
+  position: relative;
+}
 pre[class*="language-"] {
   padding-bottom: 10px;
   padding-top: 14px;
 }
 code[class*="language-"],
 pre[class*="language-"] {
-  display: inline-block;
   font-family: Menlo, Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-  width: 100%;
 }
 
 pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
@@ -85,11 +172,14 @@ pre[class*='language-'][data-language]::before {
 }
 
 .line-highlight {
-  border-bottom: 1px solid rgba(208, 172, 148, 0.4);
-  border-top: 1px solid rgba(208, 172, 148, 0.4);
-  box-shadow: 0 0 10px rgb(222, 209, 200);
+  background: rgba(255, 255, 0, 0.1);
+  border-bottom: 2px solid rgba(210, 210, 0, 0.4);
+  border-top: 2px solid rgba(210, 210, 0, 0.4);
 }
 
+.token a[target="_blank"]:after {
+  display: none;
+}
 .token.code { background: rgba(0,0,0,.1); border-radius: 3px; }
 .token.code.block { display: inline-block; padding: 0 5px; width: 100%; }
 .token.url, .token.url-link { background: transparent; color: #337ab7; }
@@ -110,4 +200,8 @@ pre[class*='language-'][data-language]::before {
 .token.boolean, .token.keyword, .token.important, .token.tag,
 .token.function, .token.number, .token.constant {
   font-weight: 700;
+}
+
+.token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string {
+  background: transparent;
 }

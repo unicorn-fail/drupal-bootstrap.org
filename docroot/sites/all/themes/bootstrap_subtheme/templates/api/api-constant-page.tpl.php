@@ -64,9 +64,6 @@ foreach ($call_links as $link) {
   print $link;
 } ?>
 
-<h3><?php print t('File'); ?></h3>
-<?php print $defined; ?>
-
 <?php if ($class) : ?>
   <h3><?php print t('Class'); ?></h3>
   <?php print $class; ?>
@@ -77,5 +74,5 @@ foreach ($call_links as $link) {
   <?php print $namespace; ?>
 <?php endif; ?>
 
-<h3><?php print t('Code'); ?></h3>
+<h3><?php print t('Source'); ?> <?php print $defined; ?></h3>
 <?php print _db_api_display_code($object, $code, FALSE); ?>

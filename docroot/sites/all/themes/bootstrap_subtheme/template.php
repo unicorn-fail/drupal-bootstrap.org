@@ -14,7 +14,7 @@ function bootstrap_subtheme_form_api_search_form_alter(&$form, &$form_state) {
   $form['search']['#attributes']['placeholder'] = $form['search']['#title'];
   $form['search']['#input_group_button'] = TRUE;
   $form['search']['#maxlength'] = NULL;
-  $form['search']['#size'] = 40;
+  $form['search']['#size'] = 25;
   $form['search']['#title_display'] = 'invisible';
 }
 
@@ -26,6 +26,7 @@ function bootstrap_subtheme_block_view_api_navigation_alter(&$data, $block) {
   if (user_access('access API reference') && !empty($branch)) {
     // Figure out if this is the default branch for this project, the same
     // way the menu system decides.
+    $branches = api_get_branches();
     $projects = _api_make_menu_projects();
     $is_default = ($branch->branch_name === $projects[$branch->project]['use branch']);
     $suffix = ($is_default) ? '' : '/' . $branch->branch_name;
@@ -52,6 +53,7 @@ function bootstrap_subtheme_block_view_api_navigation_alter(&$data, $block) {
 
     $current_path = current_path();
     $counts = api_listing_counts($branch);
+    $item = _db_api_active_item();
     foreach ($types as $type => $title) {
       if ($type === '' || $counts[$type] > 0) {
         $path = 'api/' . $branch->project;
@@ -62,7 +64,7 @@ function bootstrap_subtheme_block_view_api_navigation_alter(&$data, $block) {
         $path .= $suffix;
 
         $class = array('list-group-item');
-        if ($path == $current_path) {
+        if ($path === $current_path || ($item && preg_match('/^' . $item->object_type . '/', $type))) {
           $class[] = 'active';
         }
         $links[] = array(
@@ -79,9 +81,39 @@ function bootstrap_subtheme_block_view_api_navigation_alter(&$data, $block) {
       }
     }
 
+    $items = array();
+    foreach ($branches as $obj) {
+      $is_default = ($obj->branch_name === $projects[$obj->project]['use branch']);
+      $suffix = ($is_default) ? '' : '/' . $obj->branch_name;
+      $items[] = array(
+        '#theme' => 'link',
+        '#text' => $obj->title,
+        '#path' => 'api/' . $obj->project . $suffix,
+        '#options' => array(
+          'html' => FALSE,
+          'attributes' => array(),
+        ),
+        '#active' => $branch->branch_name === $obj->branch_name,
+      );
+    }
+
     $data = array(
       'subject' => t('API Navigation'),
-      'content' => $links,
+      'content' => array(
+        'links' => $links,
+        'branches' => array(
+          '#theme' => 'bootstrap_dropdown',
+          '#toggle' => array(
+            '#theme' => 'button',
+            '#button_type' => 'button',
+            '#value' => t('Projects') . ' <span class="caret"></span>',
+            '#attributes' => array(
+              'class' => array('btn-default', 'btn-block'),
+            ),
+          ),
+          '#items' => $items,
+        ),
+      ),
     );
   }
 }

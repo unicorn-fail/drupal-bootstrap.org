@@ -74,9 +74,6 @@ foreach ($call_links as $link) {
   print $link;
 } ?>
 
-<h3><?php print t('File'); ?></h3>
-<?php print $defined; ?>
-
 <?php if ($namespace) : ?>
   <h3><?php print t('Namespace'); ?></h3>
   <?php print $namespace; ?>

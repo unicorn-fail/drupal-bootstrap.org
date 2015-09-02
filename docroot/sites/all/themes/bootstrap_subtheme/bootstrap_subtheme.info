@@ -13,27 +13,17 @@ regions[help] = Help
 regions[content] = Content
 regions[sidebar_first] = Primary
 regions[sidebar_second] = Secondary
-regions[sidebar_second_top] = Secondary (Top)
 regions[footer] = Footer
 regions[page_top] = Page top
 regions[page_bottom] = Page bottom
 
 ; ========================================
-; Stylesheets
-; ========================================
-stylesheets[all][] = css/style.css
-
-; ========================================
-; Scripts
-; ========================================
-scripts[] = js/global.js
-
-; ========================================
 ; Settings
 ; ========================================
 settings[toggle_secondary_menu] = 0
-settings[bootstrap_fluid_container] = 1
-settings[bootstrap_region_well-sidebar_second] = 'well'
-settings[bootstrap_anchors_fix] = 0
+settings[bootstrap_fluid_container] = 0
+settings[bootstrap_region_well-sidebar_first] = ''
+settings[bootstrap_region_well-sidebar_second] = ''
+settings[bootstrap_anchors_fix] = ''
 settings[bootstrap_anchors_smooth_scrolling] = 0
-settings[bootstrap_cdn_jsdelivr_version] = '3.3.5'
+settings[bootstrap_cdn_jsdelivr_version] = '3.3.4'

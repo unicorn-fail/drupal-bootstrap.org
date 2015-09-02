@@ -28,17 +28,4 @@
  * @ingroup themeable
  */
 ?>
-<p class="api-defined">
-<dl>
-   <dt><?php
-    $startline = $object->start_line;
-    if ($startline) {
-      print t('!file, line @start_line', array('!file' => $file_link, '@start_line' => $startline));
-    }
-    else {
-      print $file_link;
-    }
-?></dt>
-  <dd><?php print $file_summary; ?></dd>
-</dl>
-</p>
+ <small><code><?php print $file_link; ?></code></small>

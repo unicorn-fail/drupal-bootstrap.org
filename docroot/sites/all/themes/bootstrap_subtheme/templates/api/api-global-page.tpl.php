@@ -56,13 +56,10 @@
   <?php print $related_topics ?>
 <?php } ?>
 
-<h3><?php print t('File'); ?></h3>
- <?php print $defined; ?>
-
 <?php if ($namespace) : ?>
   <h3><?php print t('Namespace'); ?></h3>
   <?php print $namespace; ?>
 <?php endif; ?>
 
-<h3><?php print t('Code'); ?></h3>
+<h3><?php print t('Source'); ?> <?php print $defined; ?></h3>
 <?php print _db_api_display_code($object, $code, FALSE); ?>

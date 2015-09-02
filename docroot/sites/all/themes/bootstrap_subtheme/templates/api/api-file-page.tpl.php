@@ -63,9 +63,6 @@ foreach ($call_links as $link) {
 }
 ?>
 
-<h3><?php print t('File'); ?></h3>
- <?php print $defined; ?>
-
 <?php print _db_api_display_code($object, $code); ?>
 
 <?php if (!empty($related_topics)) { ?>

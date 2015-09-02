@@ -59,14 +59,4 @@
   <h3><?php print l(t('Deprecated'), 'api/' . $branch->project . '/deprecated/' . $branch->branch_name); ?></h3>
 <?php
   }
-?>
-  <h3><?php print t('API search'); ?></h3>
-  <?php $form = drupal_get_form('api_search_form', $branch);
-        print drupal_render($form);
-  ?>
-  <?php print api_other_projects_link(); ?>
-<?php } ?>
-
-<?php if (user_access('administer API reference')) { ?>
-  <p class="api-no-mainpage"><em><?php print t('A main page for this branch has not been indexed. A documentation comment with <code>@mainpage {title}</code> needs to exist, or has not been indexed yet. For Drupal core, this is available in the <a href="http://drupal.org/project/documentation/git-instructions">documentation project</a> in the <code>developer</code> subdirectory.'); ?></em></p>
-<?php } ?>
+} ?>
