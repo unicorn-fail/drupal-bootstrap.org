@@ -390,29 +390,28 @@ function db_api_parse_md_file(array $docblock) {
   }
 
   // Find and parse all HTML comments that start with "@" as DOXYGEN keywords.
-  if (preg_match_all("/<!--\\s?@([a-z]+)\\s?([^>]*)-->\n/s", $source, $matches, PREG_SET_ORDER)) {
+  if (preg_match_all("/<!-- @([a-z]++)\\s??([\\w\\W]*)\\s??-->/U", $source, $matches, PREG_SET_ORDER)) {
     foreach ($matches as $match) {
       // Remove these from both the original source and the documentation.
       _db_api_replace_preg_match($documentation, $match);
       _db_api_replace_preg_match($source, $match);
 
       $keyword = $match[1];
-      $parts = array_filter(explode(' ', trim($match[2])));
+      $value = check_plain(trim($match[2]));
+      $parts = array_filter(explode(' ', $value));
       switch ($keyword) {
-        // Handle <!-- @mainpage {title} --> definition.
-        case 'mainpage':
-          // Extract the title.
-          $title = check_plain(implode(' ', array_filter($parts)));
-          if (empty($title)) {
-            $title = $docblock['title'];
-          }
-          $docblock['content'] .= "@mainpage $title\n";
+        case 'file':
+          $docblock['summary'] = $value;
           break;
 
-        // Handle group keyword definitions:
-        // <!-- @addtogroup machine_name -->
-        // <!-- @defgroup {machine_name} {title} -->
-        // <!-- @ingroup machine_name -->
+        case 'mainpage':
+          // Extract the title.
+          if (empty($value)) {
+            $value = $docblock['title'];
+          }
+          $docblock['content'] .= "@mainpage $value\n";
+          break;
+
         case 'addtogroup':
         case 'defgroup':
         case 'ingroup':
@@ -453,13 +452,6 @@ function db_api_parse_md_file(array $docblock) {
               '%file' => $docblock['file_name'],
             ), WATCHDOG_WARNING);
           }
-          break;
-
-        // Extract a summary via an HTML comment. While this is not a typically
-        // used "Drupal" DOXYGEN keyword, this is a markdown file and necessary:
-        // <!-- @summary description -->
-        case 'summary':
-          $docblock['summary'] = check_plain(implode(' ', $parts));
           break;
       }
     }
