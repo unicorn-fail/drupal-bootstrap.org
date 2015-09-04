@@ -1,19 +1,25 @@
 {
     "require": {
+        "league/commonmark": "0.10.*",
         "php": ">=5.3.0",
         "sensiolabs/security-checker": "~2.0",
-        "erusev/parsedown-extra": "0.7.*",
-        "gitonomy/gitlib": "~0.1.7"
+        "gitonomy/gitlib": "~0.1.7",
+        "webuni/commonmark-attributes-extension": "~0.2.0",
+        "webuni/commonmark-table-extension": "~0.3.0"
     },
     "config": {
         "autoloader-suffix": "ComposerManager",
         "vendor-dir": "docroot/../vendor"
     },
     "prefer-stable": true,
+    "suggest": {
+        "webuni/commonmark-attributes-extension": "Adds syntax to define attributes on various HTML elements inside a CommonMark markdown document.",
+        "webuni/commonmark-table-extension": "Adds syntax to create tables in a CommonMark markdown document."
+    },
     "autoload": {
         "psr-4": {
-            "Drupal\\DBMarkdown\\": [
-                "docroot/sites/all/modules/custom/db_markdown/src"
+            "Drupal\\CommonMark\\": [
+                "docroot/sites/all/modules/contrib/commonmark/src"
             ],
             "Drupal\\GitClone\\": [
                 "docroot/sites/all/modules/contrib/git_clone/src"

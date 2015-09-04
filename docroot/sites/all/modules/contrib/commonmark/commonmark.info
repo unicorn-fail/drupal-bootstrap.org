@@ -1,0 +1,12 @@
+name = CommonMark
+description = Converts Markdown to HTML based on the CommonMark spec via thephpleague/commonmark PHP library, created and maintained by The League of Extraordinary Packages.
+core = 7.x
+
+dependencies[] = composer_manager
+
+; Information added by Drupal.org packaging script on 2015-09-04
+version = "7.x-1.0"
+core = "7.x"
+project = "commonmark"
+datestamp = "1441344847"
+

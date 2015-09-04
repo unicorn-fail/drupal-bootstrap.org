@@ -1,0 +1,81 @@
+<?php
+/**
+ * @file
+ * The CommonMark module file.
+ */
+
+use Drupal\CommonMark\CommonMarkLinkRenderer;
+use League\CommonMark\Converter;
+use League\CommonMark\DocParser;
+use League\CommonMark\Environment;
+use League\CommonMark\HtmlRenderer;
+
+/**
+ * Implements hook_filter_info().
+ */
+function commonmark_filter_info() {
+  $filters['commonmark'] = array(
+    'title' => t('CommonMark'),
+    'description' => _commonmark_filter_tip(),
+    'tips callback' => '_commonmark_filter_tip',
+    'process callback' => 'commonmark_convert_to_html',
+  );
+  return $filters;
+}
+
+/**
+ * Implements callback_filter_tips().
+ */
+function _commonmark_filter_tip() {
+  return t('Converts Markdown to HTML based on the <a href="!commonmark" target="_blank">CommonMark</a> spec via <a href="!project" target="_blank">thephpleague/commonmark</a> PHP library, created and maintained by <a href="!thephpleague" target="_blank">The League of Extraordinary Packages</a>.', array(
+    '!commonmark' => 'http://commonmark.org/',
+    '!thephpleague' => 'http://commonmark.thephpleague.com/',
+    '!project' => 'https://github.com/thephpleague/commonmark',
+  ));
+}
+
+/**
+ * Parses a string with the Parsedown Extra library.
+ *
+ * @param string $string
+ *   The string to parse.
+ *
+ * @return string
+ *   The parsed string.
+ */
+function commonmark_convert_to_html($string) {
+  static $converter;
+  if (!isset($converter)) {
+    // Create a new CommonMark environment.
+    $environment = Environment::createCommonMarkEnvironment();
+
+    // Override the link renderer.
+    $environment->addInlineRenderer('Link', new CommonMarkLinkRenderer());
+
+    // Add in additional CommonMark extensions.
+    // @todo Make it easier to extend than manually specifying it in the module.
+    $extensions = array(
+      '\Webuni\CommonMark\AttributesExtension\AttributesExtension',
+      '\Webuni\CommonMark\TableExtension\TableExtension',
+    );
+
+    // Iterate over each class and add it to the CommonMark environment.
+    foreach ($extensions as $name) {
+      try {
+        $class = new ReflectionClass($name);
+        /** @var League\CommonMark\Extension\ExtensionInterface $extension */
+        $extension = $class->newInstanceArgs();
+        $environment->addExtension($extension);
+      }
+      catch (ReflectionException $e) {
+        // Do nothing, they're optional.
+      }
+    }
+
+    // Create the necessary parser, renderer and converter instances.
+    $parser = new DocParser($environment);
+    $renderer = new HtmlRenderer($environment);
+    $converter = new Converter($parser, $renderer);
+  }
+  return $converter->convertToHtml($string);
+}

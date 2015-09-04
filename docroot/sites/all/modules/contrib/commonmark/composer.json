@@ -1,0 +1,22 @@
+{
+  "name": "drupal/commonmark",
+  "license": "GPL+2",
+  "authors": [
+    {
+      "name": "Mark Carver",
+      "email": "mark.carver@me.com"
+    }
+  ],
+  "require": {
+    "league/commonmark": "0.10.*"
+  },
+  "suggest": {
+    "webuni/commonmark-attributes-extension": "Adds syntax to define attributes on various HTML elements inside a CommonMark markdown document.",
+    "webuni/commonmark-table-extension": "Adds syntax to create tables in a CommonMark markdown document."
+  },
+  "autoload": {
+    "psr-4": {
+      "Drupal\\CommonMark\\": "src/"
+    }
+  }
+}

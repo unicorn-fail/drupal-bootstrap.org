@@ -9,6 +9,20 @@
  *****************************************************************************/
 
 /**
+ * Remove an entire preg_match string from a string.
+ *
+ * @param string $string
+ *   The string to remove match from, passed by reference.
+ * @param array $matches
+ *   The matches from preg_match.
+ * @param string $replace
+ *   The string to replace match with.
+ */
+function _db_api_replace_preg_match(&$string, array $matches, $replace = '') {
+  $string = preg_replace('/' . preg_quote($matches[0], '/') . '/Us', $replace, $string);
+}
+
+/**
  * Retrieves the active API docblock object.
  *
  * @return object|void
@@ -160,51 +174,27 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
  *   The re-formatted documentation.
  */
 function _db_api_display_documentation($object, $documentation = NULL) {
-  // Normalize the documentation.
-  $documentation = _db_api_replace_alerts($documentation);
-
   // Do not double process markdown files.
-  if (!preg_match('/\.md$/', $object->file_name)) {
-    if (preg_match_all('/<pre[^>]*><code[^>]*>([\w\W]*)<\/code><\/pre>/', $documentation, $matches, PREG_SET_ORDER)) {
-      foreach ($matches as $match) {
-        $documentation = preg_replace('/' . preg_quote($match[0], '/') . '/', "```php\n" . strip_tags($match[1]) . "\n```\n", $documentation);
-      }
-    }
-
-    // Normalize the documentation.
-    $documentation = _db_api_normalize_string($documentation);
-
-    // Format the documentation for markdown.
-    $documentation = db_markdown_parse_text($documentation);
-
-    // Process the links.
-    _db_api_process_links($documentation, TRUE);
+  if (preg_match('/\.md$/', $object->file_name)) {
+    return $documentation;
   }
+
+  if (preg_match_all('/<pre[^>]*><code[^>]*>([\w\W]*)<\/code><\/pre>/', $documentation, $matches, PREG_SET_ORDER)) {
+    foreach ($matches as $match) {
+      $documentation = preg_replace('/' . preg_quote($match[0], '/') . '/', "```php\n" . strip_tags($match[1]) . "\n```\n", $documentation);
+    }
+  }
+
+  // Normalize the documentation.
+  $documentation = _db_api_normalize_string($documentation);
+
+  // Format the documentation for markdown.
+  $documentation = commonmark_convert_to_html($documentation);
+
+  // Process the links.
+  _db_api_process_links($documentation, TRUE);
 
   return $documentation;
-}
-
-function _db_api_replace_alerts($string) {
-  if (preg_match_all('/<p[^>]*>(warning|danger|info|note|notice): ([\w\W]+)<\/p>/Ui', $string, $matches, PREG_SET_ORDER)) {
-    foreach ($matches as $match) {
-      $type = strtolower($match[1]);
-      if ($type === 'note' || $type === 'notice') {
-        $class = 'info';
-      }
-      else {
-        $class = $type;
-      }
-      $build = array(
-        '#theme_wrappers' => array('container__alert__' . $class),
-        '#attributes' => array(),
-        0 => array(
-          '#markup' => db_markdown_parse_text('<strong>' . ucfirst($type) . ':</strong> ' . $match[2]),
-        ),
-      );
-      $string = str_replace($match[0], drupal_render($build), $string);
-    }
-  }
-  return $string;
 }
 
 /**
@@ -307,7 +297,7 @@ function _db_api_process_links(&$code, $replace = FALSE) {
           }
         }
         if ($replace) {
-          _db_markdown_replace_preg_match($code, $match, '<a ' . drupal_attributes($link['@attributes']) . ">$title</a>");
+          _db_api_replace_preg_match($code, $match, '<a ' . drupal_attributes($link['@attributes']) . ">$title</a>");
         }
         $links[$title] = $link['@attributes'];
       }
@@ -390,7 +380,7 @@ function db_api_parse_md_file(array $docblock) {
     $docblock['title'] = check_plain($matches[1]);
 
     // Remove the title from the documentation (as it's set as the page title).
-    _db_markdown_replace_preg_match($documentation, $matches);
+    _db_api_replace_preg_match($documentation, $matches);
 
     // Use the title as the start_line point.
     $line = array_search(trim($matches[0]), explode("\n", $source));
@@ -403,8 +393,8 @@ function db_api_parse_md_file(array $docblock) {
   if (preg_match_all("/<!--\\s?@([a-z]+)\\s?([^>]*)-->\n/s", $source, $matches, PREG_SET_ORDER)) {
     foreach ($matches as $match) {
       // Remove these from both the original source and the documentation.
-      _db_markdown_replace_preg_match($documentation, $match);
-      _db_markdown_replace_preg_match($source, $match);
+      _db_api_replace_preg_match($documentation, $match);
+      _db_api_replace_preg_match($source, $match);
 
       $keyword = $match[1];
       $parts = array_filter(explode(' ', trim($match[2])));
@@ -476,7 +466,7 @@ function db_api_parse_md_file(array $docblock) {
   }
 
   // Parse the documentation.
-  $docblock['documentation'] = db_markdown_parse_text($documentation);
+  $docblock['documentation'] = commonmark_convert_to_html($documentation);
 
   // Wrap the source code.
   $docblock['code'] = '<pre class="php"><code>' . $source . '</code></pre>';
