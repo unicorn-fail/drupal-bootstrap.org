@@ -109,7 +109,7 @@ h3 small code {
   border-left: 1px solid #ccc;
   border-radius: 0 3px 0 5px;
   bottom: auto;
-  display: inline-block;
+  display: none;
   font-family: Menlo, Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
   font-size: 12px;
   font-weight: 700;
@@ -123,10 +123,8 @@ h3 small code {
   width: auto;
   z-index: 1;
 }
-pre.line-numbers > code {
+.prism-wrapper[data-language]:hover::before {
   display: inline-block;
-  padding-right: 1em;
-  position: relative;
 }
 pre[class*="language-"] {
   padding-bottom: 10px;
@@ -136,7 +134,18 @@ code[class*="language-"],
 pre[class*="language-"] {
   font-family: Menlo, Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
 }
-
+.table :not(pre) > code[class*="language-"], .table pre[class*="language-"] {
+  background: #fff;
+}
+pre[class*="language-"] > code {
+  white-space: pre-wrap;
+}
+pre.line-numbers > code {
+  display: inline-block;
+  padding-right: 1em;
+  position: relative;
+  white-space: pre;
+}
 pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
 code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
   background: #D9EDF9;
@@ -204,4 +213,48 @@ pre[class*='language-'][data-language]::before {
 
 .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string {
   background: transparent;
+}
+
+
+.prism-toggle-whitespace {
+  bottom: 3px;
+  color: #666;
+  display: none;
+  font-size: 10px;
+  position: absolute;
+  right: 5px;
+}
+.prism-wrapper:hover .prism-toggle-whitespace {
+  display: inherit;
+}
+
+.show-whitespace .token.space,
+.show-whitespace .token.paragraph,
+.show-whitespace .token.tab {
+  opacity: .5;
+}
+.show-whitespace .token.space {
+  display: inline-block;
+  line-height: .5em;
+  text-indent: -1em;
+  overflow: hidden;
+}
+.show-whitespace .token.space:before {
+  content: "·";
+  position: relative;
+  left: 1em;
+}
+.show-whitespace .token.paragraph:before {
+  content: "¶";
+}
+.show-whitespace .token.tab {
+  background: rgba(0,0,0,.07);
+  display: inline-block;
+  position: relative;
+}
+.show-whitespace .token.tab:before {
+  content: "TAB";
+  font-family: monospace;
+  position: absolute;
+  left: .35em;
 }

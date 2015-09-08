@@ -123,7 +123,7 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
     '#theme' => 'html_tag__api__source__code',
     '#tag' => 'code',
     '#attributes' => array(
-      'class' => array("language-$lang"),
+      'class' => array("language-$lang", 'show-whitespace'),
     ),
     '#value' => $lang === 'markdown' ? htmlentities($code) : $code,
   );

@@ -1,0 +1,20 @@
+<?php
+/**
+ * @file
+ * CommonMark Table Extension module file.
+ *
+ * @todo Implement tips for this extension.
+ */
+
+/**
+ * Implements hook_commonmark_extension_info().
+ */
+function commonmark_table_commonmark_extension_info() {
+  $extensions['commonmark_table'] = [
+    'title' => t('CommonMark Table'),
+    'description' => t('Adds syntax to create tables in a CommonMark markdown document.'),
+    'url' => 'https://github.com/webuni/commonmark-table-extension',
+    'class' => '\Webuni\CommonMark\TableExtension\TableExtension',
+  ];
+  return $extensions;
+}

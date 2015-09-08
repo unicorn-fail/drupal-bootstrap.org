@@ -8,11 +8,8 @@
     }
   ],
   "require": {
-    "league/commonmark": "0.10.*"
-  },
-  "suggest": {
-    "webuni/commonmark-attributes-extension": "Adds syntax to define attributes on various HTML elements inside a CommonMark markdown document.",
-    "webuni/commonmark-table-extension": "Adds syntax to create tables in a CommonMark markdown document."
+    "league/commonmark": "~0.10.0",
+    "php": ">=5.4.8"
   },
   "autoload": {
     "psr-4": {

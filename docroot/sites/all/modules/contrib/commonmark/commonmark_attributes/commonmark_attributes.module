@@ -1,0 +1,20 @@
+<?php
+/**
+ * @file
+ * CommonMark Attributes Extension module file.
+ *
+ * @todo Implement tips for this extension.
+ */
+
+/**
+ * Implements hook_commonmark_extension_info().
+ */
+function commonmark_attributes_commonmark_extension_info() {
+  $extensions['commonmark_attributes'] = [
+    'title' => t('CommonMark Attributes'),
+    'description' => t('Adds syntax to define attributes on various elements inside a CommonMark markdown document.'),
+    'url' => 'https://github.com/webuni/commonmark-attributes-extension',
+    'class' => '\Webuni\CommonMark\AttributesExtension\AttributesExtension',
+  ];
+  return $extensions;
+}

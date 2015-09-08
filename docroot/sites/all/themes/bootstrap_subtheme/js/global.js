@@ -1,4 +1,5 @@
 +function ($, Prism) {
+  var $document = $(document);
   var $window = $(window);
 
   // "Fix" Prism's commenting regex.
@@ -8,12 +9,12 @@
     var comment;
     if (Array.isArray(Prism.languages[langs[i]].comment)) {
       comment = Prism.languages[langs[i]].comment[0];
-      delete Prism.languages[langs[i]].comment[1].pattern;
     }
     else {
       comment = Prism.languages[langs[i]].comment;
     }
     comment.pattern = /(^[^"]*?("[^"]*?"[^"]*?)*?[^"\\]*?)(\/\*[\w\W]*?\*\/|(^|[^:])\/\/.*?(\r?\n|$))/g;
+    Prism.languages[langs[i]].comment = comment;
   }
 
   // Add in "JSON" language syntax.
@@ -53,26 +54,78 @@
   // Alias/extend "htm" and "html" languages from "markup" language.
   Prism.languages.htm = Prism.languages.extend('markup', {});
   Prism.languages.html = Prism.languages.extend('markup', {});
+  Prism.languages.js = Prism.languages.extend('javascript', {});
+
+  var whitespace = window.localStorage.getItem('prism-whitespace');
+  if (whitespace === void 0 || whitespace === null) window.localStorage.setItem('prism-whitespace', 1);
 
   // Handle language labels.
   Prism.hooks.add('before-highlight', function(env) {
     var pre = env.element.parentNode;
     if (!pre || !/pre/i.test(pre.nodeName)) return;
-    var language;
+    var $pre = $(pre);
+    $(pre).wrap('<div class="prism-wrapper"></div>');
+    var $wrapper = $pre.parent();
+
+    var language = pre.getAttribute('data-language');
+    pre.removeAttribute('data-language');
     if (/^json/i.test(env.language)) {
       language = 'JSON';
     }
     else if (/^(htm|html|markup)/i.test(env.language)) {
       language = 'HTML';
     }
-    else {
-      language = pre.getAttribute('data-language');
-      pre.removeAttribute('data-language');
+    else if (env.language === 'js') {
+      language = 'JavaScript';
     }
     if (language) {
-      $(pre).wrap('<div class="prism-wrapper" data-language="' + language + '">');
+      $wrapper.attr('data-language', language);
+    }
+
+    // Create a toggle for showing whitespace.
+    var $code = $(env.element);
+    if ($code.is('.show-whitespace') || $pre.is('.show-whitespace')) {
+      for (var key in env.grammar) {
+        if (!env.grammar.hasOwnProperty(key)) continue;
+        if (Array.isArray(env.grammar[key])) {
+          for (var i = 0; i < env.grammar[key].length; i++) {
+            if (typeof env.grammar[key][i] !== 'object') env.grammar[key][i] = { pattern: env.grammar[key][i] };
+            if (!env.grammar[key][i].inside) env.grammar[key][i].inside = {};
+            env.grammar[key][i].inside.paragraph = /\n/;
+            env.grammar[key][i].inside.tab = /\t/;
+            env.grammar[key][i].inside.space = /\s/;
+          }
+        }
+        else {
+          if (typeof env.grammar[key] !== 'object') env.grammar[key] = { pattern: env.grammar[key] };
+          if (!env.grammar[key].inside) env.grammar[key].inside = {};
+          env.grammar[key].inside.paragraph = /\n/;
+          env.grammar[key].inside.tab = /\t/;
+          env.grammar[key].inside.space = /\s/;
+        }
+      }
+      env.grammar.paragraph = /\n/;
+      env.grammar.tab = /\t/;
+      env.grammar.space = /\s/;
+      var enabled = parseInt(window.localStorage.getItem('prism-whitespace'), 10);
+      var $toggle = $('<a href="#" class="prism-toggle-whitespace"></a>').text(enabled ? Drupal.t('Hide invisibles') : Drupal.t('Show invisibles'));
+      $code[enabled ? 'addClass' : 'removeClass']('show-whitespace').addClass('toggles-whitespace');
+      $pre.after($toggle);
     }
   });
+
+  $document.on('click', 'a.prism-toggle-whitespace', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var $toggles = $document.find('.prism-toggle-whitespace');
+    var $codes = $document.find('code.toggles-whitespace');
+    var enabled = parseInt(window.localStorage.getItem('prism-whitespace'), 10) ? 0 : 1;
+    $toggles.text(enabled ? Drupal.t('Hide invisibles') : Drupal.t('Show invisibles'));
+    $codes[enabled ? 'addClass' : 'removeClass']('show-whitespace');
+    window.localStorage.setItem('prism-whitespace', parseInt(enabled, 10));
+  });
+
+
 
   var sourceHash = function () {
     var hash = location.hash.slice(1);
@@ -83,22 +136,23 @@
 
   // Process "after-highlight" event.
   Prism.hooks.add('after-highlight', function (env) {
-    var $element = $(env.element);
+    var $code = $(env.element);
 
     // Ensure that the links added by the "Autolinker" plugin open in a new window.
-    $element.find('a.token.url-link').attr('target', '_blank');
+    $code.find('a.token.url-link').attr('target', '_blank');
 
     // Handle code blocks.
     var pre = env.element.parentNode;
     if (!pre || !/pre/i.test(pre.nodeName)) return;
 
-    var $pre = $element.parent();
+    var $pre = $code.parent();
+    var $wrapper = $pre.parent();
     var links = $pre.data('links');
 
     // Merge the links from API module back in.
     if (links) {
       // Only replace the text inside tokens.
-      $element.find('span.token').each(function () {
+      $code.find('span.token').each(function () {
         var $token = $(this);
         var text = $token.html().replace(/^('|")/g, '').replace(/('|")$/g, '');
         if (links[text]) {
@@ -155,28 +209,29 @@
   });
 
   // DOM ready.
-  var $document = $(document);
   $document.ready(function () {
     var $body = $('body');
     var $footer = $body.find('.footer');
     var $sidebar = $body.find('.region-sidebar-second');
 
     // Affix the sidebar.
-    $sidebar.affix({
-      offset: {
-        top: $sidebar.offset().top - 40,
-        bottom: function () {
-          return (this.bottom = $footer.outerHeight(true));
+    if ($sidebar[0]) {
+      $sidebar.affix({
+        offset: {
+          top: $sidebar.offset().top - 40,
+          bottom: function () {
+            return (this.bottom = $footer.outerHeight(true));
+          }
         }
-      }
-    });
+      });
+    }
 
     // Highlight code on page.
     Prism.highlightAll();
 
     // Set default anchor options.
     $.fn.anchor.Constructor.DEFAULTS = $.extend(true, $.fn.anchor.Constructor.DEFAULTS, {
-      anchors: '.region-content h2, .region-content h3, .region-content h4, [data-anchor]',
+      anchors: '.region-content h2, .region-content h3, [data-anchor]',
       anchorIgnore: '.element-invisible, button, [data-anchor-ignore]:not([data-anchor-ignore="false"]),[data-dismiss],[data-slide],[data-toggle]:not([data-toggle="anchor"])'
     });
 
