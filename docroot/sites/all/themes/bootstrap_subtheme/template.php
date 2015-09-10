@@ -56,7 +56,8 @@ function bootstrap_subtheme_block_view_api_navigation_alter(&$data, $block) {
     $item = _db_api_active_item();
     foreach ($types as $type => $title) {
       if ($type === '' || $counts[$type] > 0) {
-        $path = 'api/' . $branch->project;
+        $branch_path = 'api/' . $branch->project;
+        $path = $branch_path;
         if ($type) {
           $path .= "/$type";
           $title = '<span class="badge">' . $counts[$type] . '</span>' . $title;
@@ -64,20 +65,35 @@ function bootstrap_subtheme_block_view_api_navigation_alter(&$data, $block) {
         $path .= $suffix;
 
         $class = array('list-group-item');
-        if ($path === $current_path || ($item && preg_match('/^' . $item->object_type . '/', $type))) {
-          $class[] = 'active';
+        if ($type || ($type === '' && !$counts['groups'])) {
+          if ($type === 'groups') {
+            $path = $branch_path . $suffix;
+          }
+          if ($path === $current_path || ($item && preg_match('/^' . $item->object_type . '/', $type))) {
+            $class[] = 'active';
+          }
+          $links[] = array(
+            '#theme' => 'link__api__navigation_link',
+            '#text' => $title,
+            '#path' => $path,
+            '#options' => array(
+              'html' => TRUE,
+              'attributes' => array(
+                'class' => $class,
+              ),
+            ),
+          );
         }
-        $links[] = array(
-          '#theme' => 'link__api__navigation_link',
-          '#text' => $title,
-          '#path' => $path,
-          '#options' => array(
-            'html' => TRUE,
-            'attributes' => array(
+        else {
+          $links[] = array(
+            '#theme' => 'html_tag__api__navigation_link',
+            '#tag' => 'div',
+            '#value' => $title,
+            '#attributes' => array(
               'class' => $class,
             ),
-          ),
-        );
+          );
+        }
       }
     }
 
