@@ -40,5 +40,5 @@ stylesheets[all][] = css/style.css
 ; ========================================
 scripts[] = libraries/prismjs/prism.js
 scripts[] = libraries/jquery.matchHeight/jquery.matchHeight.min.js
-scripts[] = libraries/bootstrap-anchor/js/bootstrap-anchor.js
+scripts[] = libraries/bootstrap-anchor/js/bootstrap-anchor.min.js
 scripts[] = js/global.js
