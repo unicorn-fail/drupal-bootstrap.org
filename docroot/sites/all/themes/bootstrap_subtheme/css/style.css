@@ -50,11 +50,12 @@ h3 small code {
 }
 
 .region-sidebar-second.affix {
-  position: fixed !important;
-  top: 40px;
+  position: static !important;
 }
 @media (min-width: 768px) {
   .region-sidebar-second.affix {
+    position: fixed !important;
+    top: 40px;
     width: 154px;
   }
 }
@@ -69,6 +70,14 @@ h3 small code {
   }
 }
 
+
+/**
+ * Bootstrap anchor fixes.
+ */
+.anchor-link {
+  display: inline-block !important;
+  position: static !important;
+}
 
 
 

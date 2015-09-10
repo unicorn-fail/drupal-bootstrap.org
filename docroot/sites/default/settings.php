@@ -567,20 +567,30 @@ $conf['jquery_update_compression_type'] = 'min';
 
 // AdvAgg JS aggregation settings.
 $conf['advagg_bundler_max_js'] = 1;
-$conf['advagg_js_compressor'] = 1;
-$conf['advagg_js_inline_compressor'] = 1;
-$conf['advagg_mod_js_adjust_sort_inline'] = TRUE;
-$conf['advagg_mod_js_footer'] = 2;
-$conf['advagg_mod_js_head_extract'] = TRUE;
-$conf['advagg_mod_js_preprocess'] = TRUE;
+$conf['advagg_js_compressor'] = 5;
+$conf['advagg_js_compress_inline'] = 5;
+$conf['advagg_js_compress_packer'] = 0;
+$conf['advagg_js_compress_add_license'] = 0;
+$conf['advagg_mod_js_adjust_sort_inline'] = 1;
+$conf['advagg_mod_js_adjust_sort_external'] = 1;
+$conf['advagg_mod_js_adjust_sort_browsers'] = 1;
+$conf['advagg_mod_js_no_ajaxpagestate'] = 1;
+$conf['advagg_mod_js_footer'] = 1;
+$conf['advagg_mod_js_footer_inline_alter'] = 1;
+$conf['advagg_mod_js_head_extract'] = 1;
+$conf['advagg_mod_js_preprocess'] = 1;
+$conf['advagg_mod_js_defer'] = 0;
 
 // AdvAgg CSS aggregation settings.
 $conf['advagg_bundler_max_css'] = 1;
-$conf['advagg_combine_css_media'] = TRUE;
+$conf['advagg_combine_css_media'] = 1;
 $conf['advagg_css_compressor'] = 2;
 $conf['advagg_css_inline_compressor'] = 2;
-$conf['advagg_mod_css_head_extract'] = TRUE;
-$conf['advagg_mod_css_preprocess'] = TRUE;
+$conf['advagg_mod_css_head_extract'] = 1;
+$conf['advagg_mod_css_adjust_sort_external'] = 1;
+$conf['advagg_mod_css_adjust_sort_inline'] = 1;
+$conf['advagg_mod_css_preprocess'] = 1;
+$conf['advagg_mod_css_adjust_sort_browsers'] = 1;
 
 // Core settings.
 $conf['cache'] = 1;

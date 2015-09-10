@@ -27,3 +27,18 @@ settings[bootstrap_region_well-sidebar_second] = ''
 settings[bootstrap_anchors_fix] = ''
 settings[bootstrap_anchors_smooth_scrolling] = 0
 settings[bootstrap_cdn_jsdelivr_version] = '3.3.4'
+
+; ========================================
+; Stylesheets
+; ========================================
+stylesheets[all][] = libraries/prismjs/prism.css
+stylesheets[all][] = libraries/bootstrap-anchor/css/bootstrap-anchor.min.css
+stylesheets[all][] = css/style.css
+
+; ========================================
+; Scripts
+; ========================================
+scripts[] = libraries/prismjs/prism.js
+scripts[] = libraries/jquery.matchHeight/jquery.matchHeight.min.js
+scripts[] = libraries/bootstrap-anchor/js/bootstrap-anchor.min.js
+scripts[] = js/global.js

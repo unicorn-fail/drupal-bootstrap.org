@@ -1,4 +1,8 @@
-+function ($, Prism) {
+(function ($, Prism) {
+  // Remove "automatic" highlighting.
+  // @see https://github.com/PrismJS/prism/issues/765
+  document.removeEventListener('DOMContentLoaded', Prism.highlightAll);
+
   var $document = $(document);
   var $window = $(window);
 
@@ -247,5 +251,4 @@
 
   });
 
-
-}(window.jQuery, window.Prism);
+})(window.jQuery, window.Prism);
