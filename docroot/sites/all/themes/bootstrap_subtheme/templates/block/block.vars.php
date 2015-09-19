@@ -34,6 +34,9 @@ function bootstrap_subtheme_preprocess_block(&$variables) {
     $bare_blocks = array(
       'api' => array(NULL),
       'views' => array(NULL),
+      'system' => array(
+        'powered-by',
+      ),
     );
     foreach ($bare_blocks as $module => $deltas) {
       if ($block->module === $module) {
