@@ -12,7 +12,11 @@ function bootstrap_subtheme_preprocess_api_defined(&$variables) {
   $branch = $variables['branch'];
   $variables['file_summary'] = '';
 
-  $options = array();
+  $options = array(
+    'attributes' => array(
+      'data-anchor-ignore' => 'true',
+    ),
+  );
 
   if ($object->start_line) {
     $options['fragment'] = 'source.' . $object->start_line;
