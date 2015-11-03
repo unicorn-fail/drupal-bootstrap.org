@@ -1742,6 +1742,14 @@ function api_update_7140() {
 }
 
 /**
+ * Mark all files for reparse, due to various updates to the parsing code.
+ */
+function api_update_7141() {
+  $count = api_update_mark_for_reparse();
+  return format_string('@count files marked for reparse, starting at next cron run', array('@count' => $count));
+}
+
+/**
  * Remove variables and other data on uninstall.
  */
 function api_uninstall() {

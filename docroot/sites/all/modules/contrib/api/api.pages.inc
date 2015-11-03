@@ -156,11 +156,20 @@ function api_page_function_dump($branch_name) {
  * page numbering starts at 0; you can omit 'page' on the first page as well).
  *
  * @param object $branch
- *   Object representing the branch to dump objects for.
+ *   (optional) Object representing the branch to dump objects for.
+ * @param string $project
+ *   If $branch is empty, load the default branch from this project.
  *
  * @see api_menu()
  */
-function api_dump_full_list($branch) {
+function api_dump_full_list($branch, $project = '') {
+  if (!$branch) {
+    $branch = api_get_branch_by_name($project);
+    if (!$branch) {
+      return;
+    }
+  }
+
   $query = db_select('api_documentation', 'd')
     ->fields('d', array('object_name', 'namespaced_name', 'member_name', 'title', 'summary', 'object_type', 'branch_id', 'file_name'))
     ->condition('d.branch_id', $branch->branch_id)
@@ -403,7 +412,7 @@ function api_page_file($file) {
   $objects = drupal_render($objects);
 
   // If this is a theme template or YML file, make reference link.
-  $links = api_build_references(array('theme_invokes', 'theme_references', 'yml_config', 'yml_keys'), $file, $branch);
+  $links = api_build_references(array('theme_invokes', 'yml_config', 'yml_keys'), $file, $branch);
 
   $output = theme('api_file_page', array('object' => $file, 'documentation' => $documentation, 'objects' => $objects, 'code' => $code, 'see' => $see, 'deprecated' => $deprecated, 'related_topics' => $related_topics, 'defined' => $defined, 'call_links' => $links));
   $output .= _api_add_comments($file);
@@ -413,15 +422,27 @@ function api_page_file($file) {
 /**
  * Page callback: Generates the default documentation page for a branch.
  *
- * @param $branch
- *   Branch object giving the branch to display documentation for.
+ * @param object $branch
+ *   (optional) Branch object giving the branch to display documentation for.
+ *   If NULL, $project must be specified, and the default branch for that
+ *   project will be displayed.
+ * @param string $project
+ *   (optional) If $branch is not given, display this project's default branch.
+ *   Ignored if $branch is given.
  *
  * @return
- *   HTML output for the page.
+ *   Render array for the page.
  *
  * @see api_menu()
  */
-function api_page_branch($branch) {
+function api_page_branch($branch, $project = '') {
+  if (!$branch) {
+    $branch = api_get_branch_by_name($project);
+    if (!$branch) {
+      return;
+    }
+  }
+
   // Set HTML page title.
   $title = t('API reference');
   $page_title = array(
@@ -431,6 +452,9 @@ function api_page_branch($branch) {
   );
   api_set_html_page_title(implode(' | ', $page_title));
 
+  $output = array();
+  $output['navigation'] = api_make_navigation($branch);
+
   $docs = db_select('api_documentation', 'd')
     ->fields('d', array('documentation'))
     ->condition('branch_id', $branch->branch_id)
@@ -438,28 +462,47 @@ function api_page_branch($branch) {
     ->execute()
     ->fetchObject();
   if ($docs) {
-    return api_link_documentation($docs->documentation, $branch);
+    $output['docs'] = array(
+      '#type' => 'markup',
+      '#markup' => api_link_documentation($docs->documentation, $branch),
+    );
   }
   else {
-    return theme('api_branch_default_page', array('branch' => $branch));
+    $output['docs'] = array(
+      '#theme' => 'api_branch_default_page',
+      '#branch' => $branch,
+    );
   }
+
+  return $output;
 }
 
 /**
  * Page callback: Generates a listing page for an object type.
  *
- * @param $branch
- *   Object representing branch to generate the listing for.
- * @param $object_type
+ * @param object $branch
+ *   (optional) Object representing branch to generate the listing for.
+ * @param string $object_type
  *   Type of object to list ('file', 'group', etc.), or 'deprecated' for the
  *   Deprecated page.
- * @param $is_page
- *   TRUE if this is on its own page, FALSE if it is included in another page.
+ * @param $bool is_page
+ *   (optional) TRUE if this is on its own page (default), FALSE if it is
+ *   included in another page.
+ * @param string $project
+ *   Name of the project. Used if $branch is NULL, meaning find the default
+ *   branch for this project.
  *
  * @return
- *   HTML for the listing page.
+ *   Render array for the listing page.
  */
-function api_page_listing($branch, $object_type, $is_page = TRUE) {
+function api_page_listing($branch, $object_type, $is_page = TRUE, $project = '') {
+  if (!$branch) {
+    $branch = api_get_branch_by_name($project);
+    if (!$branch) {
+      return;
+    }
+  }
+
   // Set the HTML page title and breadcrumb.
   if ($is_page) {
     $breadcrumb = array(
@@ -479,6 +522,7 @@ function api_page_listing($branch, $object_type, $is_page = TRUE) {
       'namespace' => t('Namespaces'),
       'deprecated' => t('Deprecated'),
       'service' => t('Services'),
+      'element' => t('Form and render elements'),
     );
     $title = $titles[$object_type];
     drupal_set_title($title);
@@ -492,6 +536,25 @@ function api_page_listing($branch, $object_type, $is_page = TRUE) {
   }
 
   $output = array();
+
+  if ($is_page) {
+    $output['navigation'] = api_make_navigation($branch, $object_type);
+  }
+
+  // See if there is a special defgroup in this branch with the name
+  // 'listing_page_OBJECT_TYPE'. If so, display its documentation.
+  $defgroup = api_object_load('listing_page_' . $object_type, $branch, 'group');
+  if ($defgroup) {
+    $documentation = api_link_documentation($defgroup->documentation, $branch, $defgroup->file_did, NULL, FALSE, FALSE, $defgroup->is_drupal);
+    $see = api_link_documentation($defgroup->see, $branch, $defgroup->file_did, NULL, TRUE, TRUE, $defgroup->is_drupal);
+    $output['heading'] = array(
+      '#theme' => 'api_group_page',
+      '#documentation' => $documentation,
+      '#see' => $see,
+      '#object' => $defgroup,
+    );
+
+  }
 
   if ($object_type === 'function' || $object_type == 'constant' || $object_type == 'global' ) {
     $output['listing'] = array(
@@ -509,6 +572,12 @@ function api_page_listing($branch, $object_type, $is_page = TRUE) {
     $output['listing'] = array(
       '#type' => 'markup',
       '#markup' => api_display_view('api_listings', 'block_services', array($branch->branch_id)),
+    );
+  }
+  elseif ($object_type === 'element' ) {
+    $output['listing'] = array(
+      '#type' => 'markup',
+      '#markup' => api_display_view('api_listings', 'block_elements', array($branch->branch_id)),
     );
   }
   elseif ( $object_type === 'file') {
@@ -544,6 +613,77 @@ function api_page_listing($branch, $object_type, $is_page = TRUE) {
   }
 
   return $output;
+}
+
+/**
+ * Generates tab navigation for listing pages.
+ *
+ * @param object $branch
+ *   Branch of the current page.
+ * @param string $object_type
+ *   (optional) Object type of the listing page; leave out for the branch
+ *   home page.
+ *
+ * @return array
+ *   Render array for tab navigation.
+ */
+function api_make_navigation($branch, $object_type = '') {
+  switch ($object_type) {
+    case '':
+      $suffix = '';
+      break;
+
+    case 'class':
+      $suffix = 'classes';
+      break;
+
+    case 'deprecated':
+      $suffix = 'deprecated';
+      break;
+
+      default:
+        $suffix = $object_type . 's';
+  }
+
+  // Make links to all the other branches' listing pages within this
+  // project.
+  $branches = api_get_branches();
+  $links = array();
+  foreach ($branches as $other_branch) {
+    if ($other_branch->project == $branch->project) {
+      if ($suffix) {
+        $path = 'api/' . $branch->project . '/' . $suffix . '/' . $other_branch->branch_name;
+      }
+      else {
+        $path = 'api/' . $branch->project . '/' . $other_branch->branch_name;
+      }
+      $links[$other_branch->title . $other_branch->branch_id] = array(
+        'title' => $other_branch->title,
+        'href' => $path,
+        'active' => ($other_branch->branch_id == $branch->branch_id),
+      );
+    }
+  }
+
+  if ($links) {
+    ksort($links);
+    // Output this as a Local tasks array.
+    $output = array(
+      '#theme' => 'menu_local_tasks',
+      '#primary' => array(),
+    );
+    foreach ($links as $link) {
+      $link['localized_options'] = array();
+      $output['#primary'][] = array(
+        '#theme' => 'menu_local_task',
+        '#link' => $link,
+        '#active' => $link['active'],
+      );
+    }
+    return $output;
+  }
+
+  return NULL;
 }
 
 /**
@@ -791,7 +931,7 @@ function api_page_function($function) {
   $class = api_class_section($function, $branch);
 
   // Build reference links.
-  $links = api_build_references(array('calls', 'references', 'implementations', 'invokes', 'theme_invokes', 'theme_references', 'overrides'), $function, $branch);
+  $links = api_build_references(array('calls', 'references', 'implementations', 'invokes', 'theme_invokes', 'overrides'), $function, $branch);
 
   // Put it all together and theme the output.
   $output = theme('api_function_page', array('branch' => $branch, 'object' => $function, 'signatures' => $signatures, 'documentation' => $documentation, 'parameters' => $parameters, 'return' => $return, 'related_topics' => $related_topics, 'call_links' => $links, 'code' => $code, 'see' => $see, 'deprecated' => $deprecated, 'throws' => $throws, 'class' => $class));
@@ -813,6 +953,8 @@ function api_page_function($function) {
  *   - 'invokes': $name is the name of a hook, find invocations.
  *   - 'theme_invokes': $name is the name of a theme function or file, find
  *     theme calls.
+ *   - 'element_invokes': $name is the name of an element, find #type uses of
+ *     this element.
  *   - 'theme_references': $name is the name of a theme function or file, find
  *     string references to the theme hook name.
  *   - 'references': $name is the name of a function, find string references.
@@ -832,7 +974,7 @@ function api_page_function($function) {
  *   If TRUE (default), return a count. If FALSE, return an array.
  * @param $exclude_did
  *   (optional) Document ID to exclude from the query, or to use as the ID for
- *   overrides.
+ *   overrides and element_invokes.
  * @param $limit
  *   (optional) Limit the number of references returned to this amount.
  * @param bool $is_drupal
@@ -845,7 +987,7 @@ function api_page_function($function) {
 function api_find_references($name, $branch, $type, $count = TRUE, $exclude_did = 0, $limit = 0, $is_drupal = TRUE) {
 
   // Early return: if this is a Drupal type and $is_drupal is FALSE.
-  $drupal_types = array('implementations', 'theme_invokes', 'theme_references', 'invokes', 'yml_config', 'yml_keys');
+  $drupal_types = array('implementations', 'theme_invokes', 'element_invokes', 'theme_references', 'invokes', 'yml_config', 'yml_keys');
   if (!$is_drupal && in_array($type, $drupal_types)) {
     return ($count) ? 0 : array();
   }
@@ -1101,6 +1243,17 @@ function api_find_references($name, $branch, $type, $count = TRUE, $exclude_did 
         ->condition($or_clauses);
     }
   }
+  elseif ($type == 'element_invokes') {
+    // $exclude_did is the ID of a potential element class. This must have
+    // an 'element' reference in reference storage. Then we're looking for
+    // 'potential element' references to that element machine name.
+    $base_query = db_select('api_reference_storage', 'r')
+      ->condition('r.from_did', $exclude_did)
+      ->condition('r.object_type', 'element');
+    $r2 = $base_query->innerJoin('api_reference_storage', 'r2', 'r.object_name = r2.object_name AND r.branch_id = r2.branch_id');
+    $base_query->condition('r2.object_type', 'potential element');
+    $d = $base_query->innerJoin('api_documentation', 'd', 'r2.from_did = d.did');
+  }
 
   // See if we built a query to execute.
   if (is_null($base_query)) {
@@ -1248,6 +1401,46 @@ function api_page_class_hierarchy($class) {
 }
 
 /**
+ * Page callback: Displays a full interface implementations list.
+ *
+ * @param $class
+ *   Documentation object representing the interface to display.
+ *
+ * @return
+ *   HTML output for the page.
+ */
+function api_page_interface_implements($class) {
+  $branch = api_get_branch_by_id($class->branch_id);
+
+  $call_title = api_reference_text('implements', 0, $class);
+  api_object_title_and_breadcrumb($branch, $class, $call_title, TRUE);
+
+  // Make a list of all the classes that implement the interface.
+  $to_process = array($class->did => $class);
+  $processed = array();
+  $found = array();
+  while (count($to_process)) {
+    $todo = array_shift($to_process);
+    $processed[$todo->did] = $todo;
+    if ($todo->object_type == 'class') {
+      _api_class_process_inherits($todo, $to_process, $processed, $found);
+    }
+    else {
+      _api_interface_process_inherits($todo, $to_process, $processed, $found);
+    }
+  }
+
+  // Sort alphabetically and return it.
+  if ($found) {
+    ksort($found);
+    return theme('item_list', array('items' => $found));
+  }
+  else {
+    return t('No classes implement this interface');
+  }
+}
+
+/**
  * Page callback: Displays documentation for an item (constant, global, etc.).
  *
  * This function can be used to display "simple" items (items without listings,
@@ -1320,52 +1513,6 @@ function api_page_class($class) {
   // Figure out the class hierarchy.
   $hierarchy = api_class_hierarchy($class);
 
-  // Figure out what classes implement if this is an interface.
-  $implements = array();
-  if ($class->object_type === 'interface') {
-    // Make a list of all interfaces that extend this one in this branch.
-    $to_check = array($class->did);
-    $extend_list = array($class->did);
-    while (count($to_check) > 0) {
-      $this_did = array_shift($to_check);
-      $result = db_select('api_reference_storage', 'ars')
-        ->condition('ars.object_type', 'class')
-        ->condition('ars.extends_did', $this_did)
-        ->condition('ars.branch_id', $branch->branch_id)
-        ->fields('ars', array('from_did'))
-        ->execute()
-        ->fetchCol();
-      foreach ($result as $new_did) {
-        if (!in_array($new_did, $extend_list)) {
-          // Avoid loops!
-          $to_check[] = $new_did;
-        }
-        $extend_list[] = $new_did;
-      }
-    }
-
-    // Now find which classes implement either the base interface or
-    // any that extend it. Use DISTINCT on the query, because some results
-    // could be for the same class, due to somewhere in its extends hierarchy,
-    // implementing this interface twice.
-    $query = db_select('api_reference_storage', 'ars');
-    $ad = $query->innerJoin('api_documentation', 'ad', 'ad.did = ars.from_did');
-    $query->fields($ad, array('did', 'branch_id', 'file_name', 'object_type', 'object_name'))
-      ->condition('ars.extends_did', $extend_list)
-      ->condition('ars.branch_id', $branch->branch_id)
-      ->condition('ars.object_type', 'interface')
-      ->orderBy($ad . '.object_name')
-      ->distinct();
-    $result = $query->execute();
-
-    foreach ($result as $object) {
-      $implements[] = l($object->object_name, api_url($object));
-    }
-    if (count($implements) > 0) {
-      $implements = theme('item_list', array('items' => $implements));
-    }
-  }
-
   // Find and render all the class members.
   $objects = array();
   $out = api_display_view('api_members', 'block_member_list', array($class->did));
@@ -1382,11 +1529,16 @@ function api_page_class($class) {
   $reference_types = array('uses', 'references', 'services');
   if ($class->object_type == 'class') {
     $reference_types[] = 'annotations';
+    $reference_types[] = 'element_invokes';
   }
+  elseif ($class->object_type == 'interface') {
+    $reference_types[] = 'implements';
+  }
+
   $links = api_build_references($reference_types, $class, $branch);
 
   // Put it all together.
-  $output = theme('api_class_page', array('branch' => $branch, 'object' => $class, 'documentation' => $documentation, 'implements' => $implements, 'hierarchy' => $hierarchy, 'objects' => $objects, 'code' => $code, 'related_topics' => $related_topics, 'see' => $see, 'deprecated' => $deprecated, 'call_links' => $links));
+  $output = theme('api_class_page', array('branch' => $branch, 'object' => $class, 'documentation' => $documentation, 'hierarchy' => $hierarchy, 'objects' => $objects, 'code' => $code, 'related_topics' => $related_topics, 'see' => $see, 'deprecated' => $deprecated, 'call_links' => $links));
   $output .= _api_add_comments($class);
 
   return $output;
@@ -1661,6 +1813,10 @@ function api_class_hierarchy($class, $type = 'ancestors') {
     $output .= '<p>' . theme('api_function_reference_link', array('type' => 'hierarchy', 'count' => 0, 'function' => $class)) . '</p>';
   }
 
+  if ($type != 'full' && $class->object_type == 'interface') {
+    $output .= '<p>' . theme('api_function_reference_link', array('type' => 'implements', 'count' => 0, 'function' => $class)) . '</p>';
+  }
+
   return $output;
 }
 
@@ -1681,17 +1837,106 @@ function api_class_children($class, $current_did = 0) {
   $query = db_select('api_reference_storage', 'ars');
   $ad = $query->innerJoin('api_documentation', 'ad', 'ad.did = ars.from_did');
   $query
-    ->fields($ad, array('did', 'branch_id', 'file_name', 'object_type', 'object_name'))
+    ->fields($ad, array('did', 'branch_id', 'file_name', 'object_type', 'object_name', 'namespaced_name'))
     ->condition('ars.extends_did', $class->did)
     ->condition('ad.object_type', array('class', 'interface'))
     ->condition('ars.object_type', 'class')
-    ->orderBy('ad.object_name');
+    ->orderBy('ad.namespaced_name');
   $result = $query->execute();
   foreach ($result as $object) {
     $children[$object->did] = api_class_hierarchy_line($object, $current_did);
   }
 
   return $children;
+}
+
+/**
+ * Processes an interface for api_page_interface_implements().
+ *
+ * Finds all interfaces that extend it and classes that implement it, directly,
+ * and adds them to the to do and found lists.
+ *
+ * @param object $interface
+ *   Documentation object for the interface to check.
+ * @param object[] $to_process
+ *   List of classes and interfaces still to be processed, keyed by
+ *   documentation ID.
+ * @param object[] $processed
+ *   List of classes and interfaces that have already been processed, keyed
+ *   by documentation ID.
+ * @param string[] $found
+ *   Array of classes found to implement the interface. Keys are the
+ *   a sort index; values are lines like in a class hierarchy.
+ */
+function _api_interface_process_inherits($interface, &$to_process, &$processed, &$found) {
+  // Find interfaces that directly extend this one.
+  $exclude = array_merge(array_keys($to_process), array_keys($processed));
+  $query = db_select('api_reference_storage', 'ars');
+  $ad = $query->innerJoin('api_documentation', 'ad', 'ad.did = ars.from_did');
+  $query
+    ->fields($ad, array('did', 'branch_id', 'file_name', 'object_type', 'object_name'))
+    ->condition('ars.extends_did', $interface->did)
+    ->condition('ad.object_type', array('interface'))
+    // In reference storage, any "extends" gets saved as type "class".
+    ->condition('ars.object_type', 'class')
+    ->condition('ad.did', $exclude, 'NOT IN');
+  $result = $query->execute();
+  foreach ($result as $object) {
+    $to_process[$object->did] = $object;
+  }
+
+  // Find classes that directly implement this interface.
+  $query = db_select('api_reference_storage', 'ars');
+  $ad = $query->innerJoin('api_documentation', 'ad', 'ad.did = ars.from_did');
+  $query
+    ->fields($ad, array('did', 'branch_id', 'file_name', 'object_type', 'object_name', 'namespaced_name'))
+    ->condition('ars.extends_did', $interface->did)
+    ->condition('ad.object_type', array('class'))
+    // In reference storage, any "implements" gets saved as type "interface".
+    ->condition('ars.object_type', 'interface')
+    ->condition('ad.did', $exclude, 'NOT IN');
+  $result = $query->execute();
+  foreach ($result as $object) {
+    $to_process[$object->did] = $object;
+    $found[$object->namespaced_name . $object->did] = api_class_hierarchy_line($object);
+  }
+}
+
+/**
+ * Processes a class for api_page_interface_implements().
+ *
+ * Finds all classes that extend it directly, and adds them to the to do and
+ * found lists.
+ *
+ * @param object $class
+ *   Documentation object for the class to check.
+ * @param object[] $to_process
+ *   List of classes and interfaces still to be processed, keyed by
+ *   documentation ID.
+ * @param object[] $processed
+ *   List of classes and interfaces that have already been processed, keyed
+ *   by documentation ID.
+ * @param string[] $found
+ *   Array of classes found to implement the interface. Keys are the
+ *   a sort index; values are lines like in a class hierarchy.
+ */
+function _api_class_process_inherits($class, &$to_process, &$processed, &$found) {
+  // Find classes that directly extend this one.
+  $exclude = array_merge(array_keys($to_process), array_keys($processed));
+  $query = db_select('api_reference_storage', 'ars');
+  $ad = $query->innerJoin('api_documentation', 'ad', 'ad.did = ars.from_did');
+  $query
+    ->fields($ad, array('did', 'branch_id', 'file_name', 'object_type', 'object_name', 'namespaced_name'))
+    ->condition('ars.extends_did', $class->did)
+    ->condition('ad.object_type', array('class'))
+    // In reference storage, any "extends" gets saved as type "class".
+    ->condition('ars.object_type', 'class')
+    ->condition('ad.did', $exclude, 'NOT IN');
+  $result = $query->execute();
+  foreach ($result as $object) {
+    $to_process[$object->did] = $object;
+    $found[$object->namespaced_name . $object->did] = api_class_hierarchy_line($object);
+  }
 }
 
 /**
@@ -1725,7 +1970,7 @@ function api_class_hierarchy_line($class, $current_did = 0) {
     ->fields($ad, array('did', 'branch_id', 'file_name', 'object_type'))
     ->condition('ars.from_did', $class->did)
     ->condition('ars.object_type', array('interface', 'trait'))
-    ->orderBy('ad.object_name');
+    ->orderBy('ad.namespaced_name');
   $query->addField('ars', 'object_type', 'ars_object_type');
   $result = $query->execute();
   foreach ($result as $object) {
@@ -1768,7 +2013,8 @@ function api_class_hierarchy_line($class, $current_did = 0) {
     $extends = ' extends ' . $parent->object_name;
   }
 
-  $output = $class->object_type . ' ' . l($class->object_name, api_url($class), array('attributes' => array('class' => $classes))) . $extends;
+  $namespace = substr($class->namespaced_name, 0, -strlen($class->object_name));
+  $output = $class->object_type . ' ' . $namespace . l($class->object_name, api_url($class), array('attributes' => array('class' => $classes))) . $extends;
   if (count($interfaces) > 0) {
     $output .= ' implements ' . implode(', ', $interfaces);
   }
@@ -1835,7 +2081,7 @@ function _api_add_comments($documentation_object) {
  *   Formatted link to the file the object is in.
  */
 function api_file_link($object) {
-  return str_replace('/', '/<wbr>', dirname($object->file_name)) . '/<wbr>' . l(basename($object->file_name), api_url($object, TRUE));
+  return api_add_breaks(dirname($object->file_name) . '/' ) . l(basename($object->file_name), api_url($object, TRUE));
 }
 
 /**
@@ -1845,6 +2091,7 @@ function api_file_link($object) {
  *   The type of reference link. This is either one of the values listed in
  *   api_find_references(), or:
  *   - 'hierarchy': Class hierarchy ($count is ignored).
+ *   - 'implements': Interface implements list ($count is ignored).
  * @param $count
  *   The number of referenced items.
  * @param $function
@@ -1882,6 +2129,9 @@ function api_reference_text($type, $count, $function) {
   if ($type == 'overrides') {
     return format_plural($count, '1 method overrides !name', '@count methods override !name', array('!name' => $name_to_use));
   }
+  if ($type == 'element_invokes') {
+    return format_plural($count, '1 #type use of !name', '@count #type uses of !name', array('!name' => $name_to_use));
+  }
   if ($type == 'theme_invokes') {
     return format_plural($count, '1 theme call to !name', '@count theme calls to !name', array('!name' => $name_to_use));
   }
@@ -1905,6 +2155,9 @@ function api_reference_text($type, $count, $function) {
   }
   if ($type == 'hierarchy') {
     return t('Expanded class hierarchy of !name', array('!name' => $name_to_use));
+  }
+  if ($type == 'implements') {
+    return t('All classes that implement !name', array('!name' => $name_to_use));
   }
 
   return '';

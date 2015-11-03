@@ -43,12 +43,14 @@ class ApiInheritanceTestCase extends ApiWebPagesBaseTest {
    * Tests that inheritance is working.
    */
   function testInheritance() {
-    // Visit the base interface page, verify implementing class is shown.
+    // Visit the base interface page, verify implementing class is shown on
+    // the implementing page.
     $this->drupalGet('api/' . $this->branch_info['project'] . '/inheritance.php/interface/BaseInterface');
+    $this->clickLink('All classes that implement BaseInterface');
     $this->assertLink('ExcitingClass', 0, 'Implementing class is shown.');
-    $this->assertText('Implemented by', 'Implemented by text is there for interface with implementing class');
 
     // Visit the class hierarchy page and verify everything is there.
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/inheritance.php/interface/BaseInterface');
     $this->clickLink('Expanded class hierarchy of BaseInterface');
     $this->assertLink('SecondInterface', 0, 'Second interface is linked');
     $this->assertLink('ThirdInterface', 0, 'Third interface is linked');

@@ -311,7 +311,7 @@ class ApiTextFormatNoBranchTestCase extends ApiWebPagesBaseTest {
         'api_branch' => 0,
         'api_documentation' => 0,
         'api_php_branch' => 2,
-        'api_external_documentation' => 67,
+        'api_external_documentation' => 68,
         'api_php_documentation' => 2,
       ), 0, 'Branches set up');
 

@@ -30,7 +30,9 @@
 <?php print $related_topics ?>
 <?php } ?>
 
-<h3><?php print t('File'); ?></h3>
-<?php print $defined; ?>
+<?php if (isset($defined)) { ?>
+  <h3><?php print t('File'); ?></h3>
+  <?php print $defined; ?>
+<?php } ?>
 
 <?php print $objects; ?>

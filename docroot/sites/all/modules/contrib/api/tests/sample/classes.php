@@ -100,6 +100,8 @@ interface SampleInterface {
  *   something else instead.
  *
  * @see Sample::foo()
+ *
+ * @FormElement("sub_sample")
  */
 class SubSample extends Sample implements SampleInterfaceTwo, InterfaceNotDefinedHere {
   // Not documented (this is intentional for testing).

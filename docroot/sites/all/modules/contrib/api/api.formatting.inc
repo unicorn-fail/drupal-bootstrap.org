@@ -28,7 +28,7 @@
  */
 function api_link_code($code, $branch, $file_did = NULL, $class_did = NULL, $is_drupal = TRUE) {
   if ($is_drupal) {
-    $steps = array('code hook name', 'code alter hook name', 'code theme hook name', 'code function', 'code function declared', 'code member', 'code string', 'code string theme', 'yaml string', 'service', 'yaml file', 'yaml reference', 'annotation string', 'code global', 'code class', 'annotation class');
+    $steps = array('code hook name', 'code alter hook name', 'code theme hook name', 'code element name', 'code function', 'code function declared', 'code member', 'code string', 'yaml string', 'service', 'yaml file', 'yaml reference', 'annotation string', 'code global', 'code class', 'annotation class');
   }
   else {
     $steps = array('code function', 'code function declared', 'code member', 'code string', 'service', 'yaml reference', 'annotation string', 'code global', 'code class', 'annotation class');
@@ -74,7 +74,7 @@ function api_link_documentation($documentation, $branch, $file_did = NULL, $clas
   // Start with the code-related stages, for the @code sections. Follow with
   // the basic documentation stages.
   if ($is_drupal) {
-    $stages = array('code hook name', 'code alter hook name', 'code theme hook name', 'code function', 'code function declared', 'code member', 'code string', 'code string theme', 'yaml string', 'service', 'yaml file', 'annotation string', 'code global', 'code class', 'annotation class', 'tags', 'link', 'function');
+    $stages = array('code hook name', 'code alter hook name', 'code theme hook name', 'code element name', 'code function', 'code function declared', 'code member', 'code string', 'yaml string', 'service', 'yaml file', 'annotation string', 'code global', 'code class', 'annotation class', 'tags', 'link', 'function');
   }
   else {
     $stages = array('code function', 'code function declared', 'code member', 'code string', 'service', 'annotation string', 'code global', 'code class', 'annotation class', 'tags', 'link', 'function');
@@ -317,6 +317,15 @@ function _api_link_documentation($documentation, $branch, $file_did = NULL, $cla
       $type = 'theme';
       break;
 
+    case 'code element name':
+      // Works like 'code hook name' above, but for render/form elements.
+      $pattern = '!<span class="php-string potential-element">\'(' . DRUPAL_PHP_FUNCTION_PATTERN . ')\'</span>!';
+      $prepend = '<span class="php-function-or-constant">\'';
+      $append = '\'</span>';
+      $prepend_if_not_found = '<span class="php-string">\'';
+      $type = 'element';
+      break;
+
     case 'code member':
       // Works like 'code hook name' above, but for class members.
       $callback_match = 'api_link_member_name';
@@ -501,6 +510,7 @@ function api_split($pattern, $subject, $callback_match = NULL, $callback_match_a
  *   - 'hook': $name is a hook name.
  *   - 'alter hook': $name is an alter hook name.
  *   - 'theme': $name is a theme hook name.
+ *   - 'element': $name is a form/render element name.
  *   - 'function': $name is specifically a function ('file', 'constant', etc.
  *     also are supported).
  *   - 'function_or_constant': $name is either a function, constant, or class.
@@ -718,7 +728,7 @@ function _api_make_match_link($name, $namespaced_name, $text, $type, $try_link =
     $search_name = $query->addField('ad', 'object_name', 'search_name');
     $search_name_field = 'ad.object_name';
   }
-  elseif ($type != 'theme' && $type != 'file' && $type != 'yaml_string') {
+  elseif ($type != 'theme' && $type != 'file' && $type != 'yaml_string' && $type != 'element') {
     $match_name = $query->addField('ad', 'object_name', 'match_name');
     $match_name_field = 'ad.object_name';
     $search_name_field = NULL;
@@ -768,6 +778,14 @@ function _api_make_match_link($name, $namespaced_name, $text, $type, $try_link =
     $match_name = $query->addField('ad', 'title', 'match_name');
     $match_name_field = 'ad.title';
   }
+  elseif ($type == 'element') {
+    // The string is the machine name of an element, and we want to link
+    // to the element class.
+    $query->innerJoin('api_reference_storage', 'ars', "ad.did = ars.from_did AND ars.object_type = 'element'");
+    $match_name = $query->addField('ars', 'object_name', 'match_name');
+    $match_name_field = 'ars.object_name';
+    $search_name_field = 'none';
+  }
   elseif ($type == 'function') {
     $query->condition('ad.object_type', 'function');
   }
@@ -778,7 +796,7 @@ function _api_make_match_link($name, $namespaced_name, $text, $type, $try_link =
     $query->condition('ad.object_type', 'global');
   }
   elseif ($type == 'function_or_constant') {
-    $query->condition('ad.object_type', array('function', 'constant', 'class', 'interface'));
+    $query->condition('ad.object_type', array('function', 'constant', 'class', 'interface', 'trait'));
   }
   elseif ($type == 'file') {
     // For files other than HTML type, the title is the basename of the file.
@@ -801,7 +819,7 @@ function _api_make_match_link($name, $namespaced_name, $text, $type, $try_link =
     $query->condition('ad.object_type', 'constant');
   }
   elseif ($type == 'class') {
-    $query->condition('ad.object_type', array('class', 'interface'));
+    $query->condition('ad.object_type', array('class', 'interface', 'trait'));
   }
   elseif ($type == 'group') {
     $query->condition('ad.object_type', 'group');

@@ -272,18 +272,31 @@ class ApiMultipleProjectsTest extends ApiWebPagesBaseTest {
     $this->assertLink('Drupal', 0, 'Drupal project link exists');
     $this->assertLink('Sample', 0, 'Sample project link exists');
     $this->assertLink('Test', 0, 'Test project link exists');
+
     // Verify a link on the Project page.
     $this->clickLink('Test');
     $this->assertRaw($this->branch_info_2['title'], 'Branch title is on branch page');
     $this->assertURLContains($this->branch_info_2['project'], 'Project is in URL');
     $this->assertTitleContains($this->branch_info_2['title'], 'Branch title is in page title');
 
+    // Verify the default project is found at path 'api'.
     $this->drupalGet('api');
     $this->assertRaw($this->branch_info_core['project_title'], 'Default project is correct');
 
+    // Verify function pages without branch suffixes work.
     $this->drupalGet('api/' . $this->branch_info_core['project'] . '/drupal.php/function/theme');
     $this->assertResponse(200, 'Function page without branch suffix redirected correctly in core branch');
     $this->assertText('Generates themed output.', 'Description appears on page');
+
+    // Go to a listing page on the non-default project's default branch and
+    // verify that the page is correct and navigation block is correct.
+    $this->drupalGet('api/' . $this->branch_info_2['project'] . '/classes');
+    $this->assertLink('BaseInterface', 0, 'Class is found on non-default project class listing page');
+    $this->clickLink('Functions');
+    $this->assertUrlContains('api/' . $this->branch_info_2['project'] . '/functions', 'Navigation link went to correct project');
+    $this->assertLink('sample_function', 0, 'Sample function is found');
+    $this->assertText('This project/branch', 'Correct version of sample function is shown');
+
   }
 
   /**

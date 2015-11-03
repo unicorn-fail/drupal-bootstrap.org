@@ -18,3 +18,25 @@ function commonmark_table_commonmark_extension_info() {
   ];
   return $extensions;
 }
+
+/**
+ * Implements hook_registry_autoload_registry_alter().
+ */
+function commonmark_table_registry_autoload_registry_alter(array &$registry) {
+  if (($library_path = commonmark_get_library_path('webuni', 'commonmark-table-extension', FALSE)) && file_exists("$library_path/src")) {
+    $autoload_searcher = new RegistryAutoloadSearcher(registry_get_parsed_files());
+    $module = (object) db_select('system', 's')->fields('s')->condition('name', 'commonmark_table')->execute()->fetchAssoc();
+    $class_files = $autoload_searcher->findClassFiles("$library_path/src", 'PSR-4/absolute');
+    $registry = array_merge($registry, $autoload_searcher->processFiles($class_files, $module));
+  }
+}
+
+/**
+ * Implements hook_xautoload().
+ */
+function commonmark_table_xautoload($adapter) {
+  if (($library_path = commonmark_get_library_path('webuni', 'commonmark-table-extension')) && file_exists("$library_path/composer.json")) {
+    /** @var \Drupal\xautoload\Adapter\LocalDirectoryAdapter $adapter */
+    $adapter->absolute()->composerJson("$library_path/composer.json");
+  }
+}

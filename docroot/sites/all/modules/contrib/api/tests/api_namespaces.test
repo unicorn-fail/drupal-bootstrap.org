@@ -35,9 +35,17 @@ class ApiNamespacesTestCase extends ApiWebPagesBaseTest {
   }
 
   /**
+   * Runs all the tests, so that setUp() isn't done multiple times.
+   */
+  function testAll() {
+    $this->_testNamespacePages();
+    $this->_testYaml();
+  }
+
+  /**
    * Tests that the namespace pages and namespaced objects work fine.
    */
-  function testNamespacePages() {
+  function _testNamespacePages() {
     // Test namespaces page.
     $this->drupalGet('api/' . $this->branch_info['project'] . '/namespaces');
     $this->assertLink('api\\test1', 0, 'First namespace link is there');
@@ -86,14 +94,14 @@ class ApiNamespacesTestCase extends ApiWebPagesBaseTest {
     $this->assertLink('\\api\\test1\\InterfaceD', 0, 'Link to type of member variable is there');
 
     // Verify namespace links on file pages.
-    $this->drupalGet('api/' . $this->branch_info['project'] . '/ClassA.php');
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/ClassA.php/' . $this->branch_info['branch_name']);
     $this->assertText('Namespace', 'Namespace header is on file page');
     $this->assertLink('api\\test1', 0, 'Namespace link is on file page');
     $this->clickLink('api\\test1');
     $this->assertLink('InterfaceD', 0, 'Link went back to namespace page');
 
     // Verify lack of namespace links on no-namespace files.
-    $this->drupalGet('api/' . $this->branch_info['project'] . '/no_namespace.php');
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/no_namespace.php/' . $this->branch_info['branch_name']);
     $this->assertNoText('Namespace', 'Namespace header is not on non-namespaced file page');
     $this->assertNoLink('api\\test1', 'Namespace link is not on non-namespaced file page');
     $this->assertNoLink('api\\test2', 'Namespace link is not on non-namespaced file page');
@@ -106,6 +114,17 @@ class ApiNamespacesTestCase extends ApiWebPagesBaseTest {
     $this->drupalGet('api/' . $this->branch_info['project'] . '/ClassB.php/class/ClassB');
     $this->assertText('1 file declares its use of ClassB', 'Reference text is on class page');
     $this->assertLink('ClassA.php', 0, 'Link to file using class is present');
+
+    // Verify traits are listed on the Classes page.
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/classes');
+    $this->assertLink('TraitF', 0, 'Trait appears on classes page');
+
+    // Verify trait, class, interface turn into links on Files page
+    // (from @file tag first lines).
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/files');
+    $this->assertLink('\api\test1\TraitF', 0, 'Trait turns into link in documentation');
+    $this->assertLink('\api\test1\ClassA', 0, 'Class turns into link in documentation');
+    $this->assertLink('\api\test2\InterfaceC', 0, 'Interface turns into link in documentation');
 
     // Verify trait page.
     $this->drupalGet('api/' . $this->branch_info['project'] . '/TraitF.php/trait/TraitF');
@@ -140,13 +159,24 @@ class ApiNamespacesTestCase extends ApiWebPagesBaseTest {
     $this->assertLinkURLSubstring('pdq', $this->branch_info['project'] . '/TraitF.php/function/TraitF', 'Aliased trait method link exists', 'Aliased trait method link went to the right place');
     $this->clickLink('pdq');
     $this->assertText('Method to inherit', 'Clicking to trait method page went to right place');
+
+    // Set the breaks tag variable and test Classes and Namespaces pages.
+    variable_set('api_breaks_tag', '<wbr />');
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/namespaces');
+    $this->assertRaw('\\<wbr />', 'Break tag is inserted after a backslash');
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/classes');
+    $this->assertRaw('\\<wbr />', 'Break tag is inserted after a backslash');
+
+    // Set breaks tag back to empty to continue with testing.
+    variable_set('api_breaks_tag', '');
+
   }
 
   /**
    * Tests that YAML works properly for linking and references.
    */
-  function testYaml() {
-    $this->drupalGet('api/' . $this->branch_info['project'] . '/sample.routing.yml');
+  function _testYaml() {
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/sample.routing.yml/' . $this->branch_info['branch_name']);
 
     // Verify that the page name is correct.
     $this->assertTitleContains('sample.routing.yml', 'Page title is correct');
@@ -171,17 +201,17 @@ class ApiNamespacesTestCase extends ApiWebPagesBaseTest {
     $this->assertText("1 string reference to 'another_function'", 'Reference text is there');
     $this->assertLink('sample.routing.yml', 0, 'Referenced file is linked');
 
-    $this->drupalGet('api/' . $this->branch_info['project'] . '/sample.routing.yml');
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/sample.routing.yml/' . $this->branch_info['branch_name']);
     $this->clickLink('\api\test1\ClassA::cMethod');
     $this->assertText("1 string reference to 'ClassA::cMethod'", 'Reference text is there');
     $this->assertLink('sample.routing.yml', 0, 'Referenced file is linked');
 
-    $this->drupalGet('api/' . $this->branch_info['project'] . '/sample.routing.yml');
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/sample.routing.yml/' . $this->branch_info['branch_name']);
     $this->clickLink('\api\test1\ClassA::dMethod');
     $this->assertText("1 string reference to 'ClassA::dMethod'", 'Reference text is there');
     $this->assertLink('sample.routing.yml', 0, 'Referenced file is linked');
 
-    $this->drupalGet('api/' . $this->branch_info['project'] . '/sample.routing.yml');
+    $this->drupalGet('api/' . $this->branch_info['project'] . '/sample.routing.yml/' . $this->branch_info['branch_name']);
     $this->clickLink('api\test1\ClassA');
     $this->assertText("1 string reference to 'ClassA'", 'Reference text is there');
     $this->assertLink('sample.routing.yml', 0, 'Referenced file is linked');

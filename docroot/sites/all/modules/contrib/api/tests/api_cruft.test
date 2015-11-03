@@ -99,8 +99,8 @@ class ApiCruftTestCase extends ApiWebPagesBaseTest {
     $this->checkAndClearLog();
     $this->updateBranches();
     $this->processApiParseQueue();
-    $counts['node'] = 68;
-    $counts['api_documentation'] = 67;
+    $counts['node'] = 69;
+    $counts['api_documentation'] = 68;
     $counts['api_file'] = 11;
     $counts['api_function'] = 30;
     $counts['api_members'] = 30;
@@ -155,9 +155,9 @@ class ApiCruftTestCase extends ApiWebPagesBaseTest {
 
     $counts['comment'] = 1;
     $counts['api_file'] = 7;
-    $counts['api_documentation'] = 41;
+    $counts['api_documentation'] = 42;
     $counts['api_function'] = 21;
-    $counts['node'] = 42;
+    $counts['node'] = 43;
     $counts['api_members'] = 13;
     $counts['api_overrides'] = 8;
     $this->verifyCounts($counts, 0, 'Exclude subdirectory');
@@ -254,12 +254,12 @@ class ApiCruftTestCase extends ApiWebPagesBaseTest {
     $this->processApiParseQueue();
     $counts['api_project'] = 1;
     $counts['api_branch'] = 1;
-    $counts['api_documentation'] = 67;
+    $counts['api_documentation'] = 68;
     $counts['api_file'] = 11;
     $counts['api_function'] = 30;
     $counts['api_members'] = 30;
     $counts['api_overrides'] = 22;
-    $counts['node'] = 68;
+    $counts['node'] = 69;
     $this->verifyCounts($counts, 0, 'Branch added again');
 
     $default_branch = api_get_branch_by_id();

@@ -49,7 +49,7 @@ class ApiURLPatternsTest extends ApiTestCase {
       ),
       array(
         'url' => 'api/' . $project_name . '/' . $branch_name,
-        'aliases' => array('api/' . $branch_name),
+        'aliases' => array(),
         'text' => array('A sample group.', 'A sample group of classes'),
         'links' => array(t('Topics'), t('Files')),
       ),
@@ -151,8 +151,6 @@ class ApiURLPatternsTest extends ApiTestCase {
         'url' => 'api/' . $project_name . '/subdirectory!sample-subdir.php/' . $branch_name,
         'aliases' => array(
           'api/' . $project_name . '/subdirectory--sample-subdir.php/' . $branch_name,
-          'api/file/subdirectory/sample-subdir.php',
-          'api/file/subdirectory/sample-subdir.php/' . $branch_name,
         ),
         'text' => array('A sample file in a subdirectory', 'sample-subdir.php', 'A sample global in a subdirectory'),
         'links' => array('$sample_in_sub_dir_global'),

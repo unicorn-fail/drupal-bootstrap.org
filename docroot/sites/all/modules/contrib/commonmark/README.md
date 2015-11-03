@@ -4,64 +4,55 @@ This module provides a text format filter that converts Markdown to HTML based
 on the [CommonMark] spec via [thephpleague/commonmark] PHP library, created and
 maintained by [The League of Extraordinary Packages].
 
-To see the full list of "tips" provided by this filter, visit:  
-http://drupal-bootstrap.org/filter/tips/commonmark
+## Try out a demonstration!
+http://commonmark.unicorn.fail
+
+To see a full list of "long tips" provided by this filter, visit:
+http://commonmark.unicorn.fail/filter/tips
 
 ## Requirements
 - **PHP >= 5.4.8**  
-  This is a hard requirement because of [thephpleague/commonmark], sorry.
+  This is a hard requirement due to [thephpleague/commonmark].
 
 ## Soft Requirements
+This modules supports the following methods for installing the necessary PHP
+libraries and autoloading the module and library PSR-4 classes. You must choose
+one of the following methods:
+
 - **Composer**  
-  This module no longer implements a hard requirement for [Composer Manager].
-  This can conflict with installations using something like
-  [Drupal Composer Packagist].  
+  Composer is the preferred method for installing PHP libraries and autoloading
+  the module and library PSR-4 classes. Works with [Composer Manager] and
+  [Drupal Composer Packagist].
+- **Registry Autoload or X Autoload**  
+  This module supports using the [Registry Autoload] module or the [X Autoload]
+  module. If you use either of these modules, you must also install the
+  necessary PHP libraries. You can do this automatically using the following
+  Drush command or by manually placing the necessary PHP libraries in
+  `sites/*/libraries`:  
     
-  While Composer is the preferred method for installing PHP libraries and
-  autoloading PSR-4 classes, this isn't necessarily always the case. Other
-  modules can be used, like [X Autoload] for instance, that can load libraries
-  and classes... just in a different way.  
-    
-  This module will not divulge into how to implement methods that differ from
-  composer. If you choose one of them, you are on your own.
+  ```sh
+  drush commonmark-download
+  ```
 
 ## CommonMark Extensions
-- **Enhanced Links**  
-  _Built in, enabled by default_  
-    
+- **Enhanced Links** - _Built in, enabled by default_  
   Extends CommonMark to provide additional enhancements when rendering links.
-- **@ Autolinker**  
-  _Built in, disabled by default_  
-    
+- **@ Autolinker** - _Built in, disabled by default_  
   Automatically link commonly used references that come after an at character
   (@) without having to use the link syntax.
-- **# Autolinker**  
-  _Built in, disabled by default_  
-    
+- **# Autolinker** - _Built in, disabled by default_  
   Automatically link commonly used references that come after a hash character
   (#) without having to use the link syntax.
 - **[CommonMark Attributes Extension]**
   Adds syntax to define attributes on various HTML elements inside a CommonMark
-  markdown document.  
-    
-  To install, enable the `commonmark_attributes` sub-module. Additionally, you
-  may need to require the PHP library by going to the root composer project and
-  executing:  
-    
-  `composer require webuni/commonmark-attributes-extension:~0.2.0`  
-    
+  markdown document. To install, enable the `commonmark_attributes` sub-module.
 - **[CommonMark Table Extension]**  
-  Adds syntax to create tables in a CommonMark markdown document.  
-    
-  To install, enable the `commonmark_table` sub-module. Additionally, you may
-  need to require the PHP library by going to the root composer project and
-  executing:  
-    
-  `composer require webuni/commonmark-table-extension:~0.3.0`
+  Adds syntax to create tables in a CommonMark markdown document.  To install,
+  enable the `commonmark_table` sub-module.
 
 ## Features Support
 There is a sub-module named `commonmark_feature` that you can enable to get up
-and going. Or you can simply use it to base your own feature off of it.
+and going. Or you can simply use it as a base/reference for your own feature.
 
 ## APIs
 There are extensive APIs for providing additional extensions, settings and tips.
@@ -98,5 +89,6 @@ be easier to load the converter instance yourself and avoid additional calls to
 [Composer Manager]: https://www.drupal.org/project/composer_manager
 [Drupal Composer Packagist]: https://packagist.drupal-composer.org/packages/drupal/commonmark
 [thephpleague/commonmark]: https://github.com/thephpleague/commonmark
+[Registry Autoload]: https://www.drupal.org/project/registry_autoload
 [The League of Extraordinary Packages]: http://commonmark.thephpleague.com/
 [X Autoload]: https://www.drupal.org/project/xautoload

@@ -118,6 +118,8 @@ function sample_function($parameter, $complex_parameter) {
   $foo = sample_function();
 
   $bar = array('#theme' => 'sample_two');
+
+  $baz = array('#type' => 'subdir_sample');
 }
 
 /**
@@ -352,3 +354,11 @@ function sample_one() {
 $var = 1;
 function () use ($var) {};
 function () use ($var) {};
+
+/**
+ * @defgroup listing_page_class Page header for Functions page
+ *
+ * Say something interesting about classes here.
+ *
+ * @see sample_function()
+ */

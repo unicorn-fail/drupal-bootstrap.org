@@ -990,7 +990,7 @@ function api_save_documentation($docblocks) {
       case 'trait':
         db_delete('api_reference_storage')
           ->condition('branch_id', $docblocks[0]['branch']->branch_id)
-          ->condition('object_type', array('class', 'interface', 'trait', 'annotation_class', 'annotation'))
+          ->condition('object_type', array('class', 'interface', 'trait', 'annotation_class', 'annotation', 'element'))
           ->condition('from_did', $docblock['did'])
           ->execute();
         db_delete('api_namespace')
@@ -1040,6 +1040,11 @@ function api_save_documentation($docblocks) {
         if (isset($docblock['references']['annotation'])) {
           foreach($docblock['references']['annotation'] as $class) {
             api_reference($docblocks[0]['branch'], 'annotation', $class, $docblock['did']);
+          }
+        }
+        if (isset($docblock['references']['element'])) {
+          foreach($docblock['references']['element'] as $element_type) {
+            api_reference($docblocks[0]['branch'], 'element', $element_type, $docblock['did']);
           }
         }
         if ($docblock['annotation_class']) {
@@ -1231,7 +1236,7 @@ function api_replace_references($branch, $did, $name, $references, $do_namespace
   }
 
   // Remove any existing references.
-  $types_to_remove =  array('function', 'potential hook', 'potential theme', 'potential alter', 'potential callback', 'potential file', 'constant', 'member-parent', 'member-self', 'member', 'member-class', 'yaml string', 'service_tag', 'service_class');
+  $types_to_remove =  array('function', 'potential hook', 'potential theme', 'potential element', 'potential alter', 'potential callback', 'potential file', 'constant', 'member-parent', 'member-self', 'member', 'member-class', 'yaml string', 'service_tag', 'service_class');
 
   db_delete('api_reference_storage')
     ->condition('branch_id', $branch->branch_id)
@@ -1391,6 +1396,14 @@ function api_format_documentation($documentation, $auto_p = TRUE, &$references) 
     $class = $annotation_matches[1];
     $references['annotation'][$class] = $class;
     $documentation = str_replace($annotation_matches[0], '<h3>' . t('Plugin annotation') . '</h3>' . "\n@code\n@" . $annotation_matches[1] . $annotation_matches[2]. "\n@endcode", $documentation);
+    $element_types = array('FormElement', 'RenderElement');
+    if (in_array($class, $element_types)) {
+      // This is annotation like @FormElement("button") or
+      // @RenderElement("table"). Extract the element machine name
+      // (button/table) from $annotation_matches[2] and save it as a reference.
+      $element_type = trim(decode_entities($annotation_matches[2]), " \t\n\r()'\"");
+      $references['element'][$element_type] = $element_type;
+    }
   }
 
   // Process the @code @endcode tags.
@@ -1624,6 +1637,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
       'function' => array(),
       'potential hook' => array(),
       'potential theme' => array(),
+      'potential element' => array(),
       'potential alter' => array(),
       'potential callback' => array(),
       'member-parent' => array(),
@@ -1636,6 +1650,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
   // Keep track of:
   // - Are we in a double-quoted string?
   // - Are we in the parameters for a hook or theme invocation?
+  // - Are we after a '#theme' => or '#type' => in an array?
   // - Are we in process of declaring a function, class, etc.?
   // - How many PHP start/end tags we found (will remove at end if there is
   //   only one set).
@@ -1670,6 +1685,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
 
   $paren_count = 0;
   $target_paren_count = 0;
+  $previous_key = '';
 
   // PHP open/close tag counts and string size.
   $open_count = 0;
@@ -1704,15 +1720,19 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
       if ($token == '"') {
         $output .= '"</span>';
         $in_string = FALSE;
+        $previous_key = $double_quote_string;
       }
       else {
-        $output .= is_array($token) ? htmlspecialchars($token[1]) : htmlspecialchars($token);
+        $char = is_array($token) ? htmlspecialchars($token[1]) : htmlspecialchars($token);
+        $output .= $char;
+        $double_quote_string .= $char;
       }
       continue;
     }
     elseif ($token == '"') {
       $output .= '<span class="php-string">"';
       $in_string = TRUE;
+      $double_quote_string = '';
       $in_member = FALSE;
       $member_of = '';
       $in_namespace = FALSE;
@@ -1736,6 +1756,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           $member_of = '';
           $in_namespace = FALSE;
           $full_namespaced_name = '';
+          $previous_key = '';
           $to_add = '<span class="php-boundry">' . $value . '</span>';
           $open_count++;
           if (strlen($output) == 0) {
@@ -1754,6 +1775,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           $member_of = '';
           $in_namespace = FALSE;
           $full_namespaced_name = '';
+          $previous_key = '';
           $to_add = '<span class="php-boundry">' . $value . '</span>';
           $close_count++;
           // Save the size of the closing tag here. If we didn't encounter
@@ -1772,6 +1794,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           $member_of = '';
           $in_namespace = FALSE;
           $full_namespaced_name = '';
+          $previous_key = '';
           $output .= '<span class="php-comment">' . $value . '</span>';
           break;
 
@@ -1803,6 +1826,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           $member_of = $value;
           $in_namespace = FALSE;
           $full_namespaced_name = '';
+          $previous_key = '';
           $output .= '<span class="' . $class . '">' . $value . '</span>';
           break;
 
@@ -1815,18 +1839,28 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           $full_namespaced_name = '';
           // This is a string like 'foo'. If we're in a call of some sort,
           // then this is a potential function, hook, etc. name.
+          $value_no_quotes = str_replace("'", '', $value);
           $class = 'php-string';
           if ($invoke_type != '' && preg_match("|^'" . API_RE_FUNCTION_CHARACTERS . "'$|", $value)) {
             $class .= ' potential-' . $invoke_type;
             if ($track_references) {
-              $newname = str_replace("'", '', $value);
+              $newname = $value_no_quotes;
               $references['potential ' . $invoke_type][$newname] = $newname;
             }
           }
           if ($track_references) {
             if (preg_match("|^'" . DRUPAL_PHP_FUNCTION_PATTERN . "'$|", $value)) {
-              $newname = str_replace("'", '', $value);
-              $references['potential callback'][$newname] = $newname;
+              $reftype = 'potential callback';
+              if ($previous_key == '#theme') {
+                $reftype = 'potential theme';
+                $class .= ' potential-theme';
+              }
+              elseif ($previous_key == '#type') {
+                $reftype = 'potential element';
+                $class .= ' potential-element';
+              }
+              $newname = $value_no_quotes;
+              $references[$reftype][$newname] = $newname;
             }
             elseif (preg_match("|^'" . API_RE_FILENAME . "'$|", $value)) {
               // Some of these may be quite long, so truncate.
@@ -1836,6 +1870,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           }
 
           $output .= '<span class="' . $class . '">' . $value . '</span>';
+          $previous_key = $value_no_quotes;
           break;
 
         case T_INLINE_HTML:
@@ -1845,6 +1880,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           $member_of = '';
           $in_namespace = FALSE;
           $full_namespaced_name = '';
+          $previous_key = '';
           $output .= '<span class="php-string">' . $value . '</span>';
           break;
 
@@ -1853,6 +1889,8 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           // This is a function, constant, etc. being declared or used.
           // Plus the special case of the static keyword, since this can
           // also be used as static::memberFunction().
+
+          $previous_key = '';
 
           // See if the next token is a backslash. In which case, add to the
           // name so far and continue on.
@@ -1971,6 +2009,7 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           $full_namespaced_name .= $value;
           $in_member = FALSE;
           $member_of = '';
+          $previous_key = '';
           break;
 
         case T_LNUMBER:
@@ -1999,24 +2038,20 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
           $member_of = '';
           $in_namespace = FALSE;
           $full_namespaced_name = '';
+          $previous_key = '';
           $output .= '<span class="php-keyword">' . $value . '</span>';
           break;
 
-        case T_ARRAY_CAST:
-        case T_ARRAY:
         case T_AS:
-        case T_BOOL_CAST:
         case T_BREAK:
         case T_CASE:
         case T_CONTINUE:
         case T_DECLARE:
         case T_DEFAULT:
         case T_DO:
-        case T_DOUBLE_CAST:
         case T_ECHO:
         case T_ELSE:
         case T_ELSEIF:
-        case T_EMPTY:
         case T_ENDDECLARE:
         case T_ENDFOR:
         case T_ENDFOREACH:
@@ -2032,23 +2067,31 @@ function api_format_php($code, &$references, $number = FALSE, $track_references 
         case T_IF:
         case T_INCLUDE_ONCE:
         case T_INCLUDE:
-        case T_INT_CAST:
-        case T_ISSET:
-        case T_LIST:
         case T_NAMESPACE:
         case T_NEW:
-        case T_OBJECT_CAST:
         case T_PRINT:
         case T_REQUIRE_ONCE:
         case T_REQUIRE:
         case T_RETURN:
-        case T_STRING_CAST:
         case T_SWITCH:
-        case T_UNSET_CAST:
         case T_UNSET:
         case T_USE:
         case T_VAR:
         case T_WHILE:
+          $previous_key = '';
+          // Intentional fall-through here...
+
+        case T_ARRAY:
+        case T_ARRAY_CAST:
+        case T_BOOL_CAST:
+        case T_DOUBLE_CAST:
+        case T_EMPTY:
+        case T_INT_CAST:
+        case T_ISSET:
+        case T_LIST:
+        case T_OBJECT_CAST:
+        case T_STRING_CAST:
+        case T_UNSET_CAST:
           $in_annotation = FALSE;
           $declaring = FALSE;
           $in_member = FALSE;

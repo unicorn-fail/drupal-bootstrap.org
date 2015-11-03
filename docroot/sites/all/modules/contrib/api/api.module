@@ -396,30 +396,17 @@ function api_menu() {
   }
 
   $default_branch = api_get_branch_by_id();
-  $projects = _api_make_menu_projects();
-  if (!count($projects) || !isset($default_branch->project)) {
+  if (empty($default_branch) || !isset($default_branch->project)) {
     return $items;
   }
 
-  // Legacy search URLs.
-  $items['api/search'] = array(
+  // Redirect URL to take 'api' to the default branch page.
+  $items['api'] = array(
     'page callback' => 'drupal_goto',
-    'page arguments' => array('api/' . $default_branch->project . '/' . $default_branch->branch_name . '/search', array(), '302'),
-    'access arguments' => array('access API reference'),
+    'page arguments' => array('api/' . $default_branch->project, array(), '302'),
+    'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
-
-  foreach ($branches as $branch) {
-    if (!isset($items['api/search/' . $branch->branch_name . '/%'])) {
-      $items['api/search/' . $branch->branch_name . '/%'] = array(
-        'page callback' => 'api_legacy_search_redirect',
-        'page arguments' => array($branch, 3),
-        'access arguments' => array('access API reference'),
-        'type' => MENU_CALLBACK,
-        'file' => 'legacy.inc',
-      );
-    }
-  }
 
   // Special URL to use for a redirect to search on 404.
   $items['apis'] = array(
@@ -448,8 +435,9 @@ function api_menu() {
   );
 
   // Search autocomplete callback.
-  $items['api/search/autocomplete'] = array(
+  $items['api/search/autocomplete/%'] = array(
     'page callback' => 'api_search_autocomplete',
+    'page arguments' => array(3),
     'access arguments' => array('access API reference'),
     'type' => MENU_CALLBACK,
   );
@@ -472,8 +460,8 @@ function api_menu() {
     'file' => 'api.pages.inc',
   );
 
-  // File pages.
-  $items['api/%/%api_filename'] = array(
+  // File pages and their references pages.
+  $items['api/%api_project/%api_filename/%'] = array(
     'title' => 'File',
     'load arguments' => array(1, 3), // project, branch
     'page callback' => 'api_page_file',
@@ -482,7 +470,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%api_filename/theme_invokes'] = array(
+  $items['api/%api_project/%api_filename/theme_invokes'] = array(
     'title' => 'File',
     'load arguments' => array(1, 4), // project, branch
     'page callback' => 'api_page_function_calls',
@@ -491,7 +479,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%api_filename/theme_references'] = array(
+  $items['api/%api_project/%api_filename/theme_references'] = array(
     'title' => 'File',
     'load arguments' => array(1, 4), // project, branch
     'page callback' => 'api_page_function_calls',
@@ -500,7 +488,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%api_filename/yml_config'] = array(
+  $items['api/%api_project/%api_filename/yml_config'] = array(
     'title' => 'File',
     'load arguments' => array(1, 4), // project, branch
     'page callback' => 'api_page_function_calls',
@@ -509,7 +497,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%api_filename/yml_keys'] = array(
+  $items['api/%api_project/%api_filename/yml_keys'] = array(
     'title' => 'File',
     'load arguments' => array(1, 4), // project, branch
     'page callback' => 'api_page_function_calls',
@@ -519,8 +507,11 @@ function api_menu() {
     'file' => 'api.pages.inc',
   );
 
-  // Individual item pages.
-  $items['api/%/%/function/%api_item'] = array(
+  // Individual item pages for functions, classes, etc., and their
+  // references pages.
+
+  // Function pages.
+  $items['api/%api_project/%/function/%api_item'] = array(
     'title' => 'Function',
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function',
@@ -529,8 +520,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-
-  $items['api/%/%/function/calls/%api_item'] = array(
+  $items['api/%api_project/%/function/calls/%api_item'] = array(
     'title' => 'Function calls',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -539,7 +529,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/function/implementations/%api_item'] = array(
+  $items['api/%api_project/%/function/implementations/%api_item'] = array(
     'title' => 'Function implementations',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -548,7 +538,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/function/references/%api_item'] = array(
+  $items['api/%api_project/%/function/references/%api_item'] = array(
     'title' => 'Function references',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -557,7 +547,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/function/invokes/%api_item'] = array(
+  $items['api/%api_project/%/function/invokes/%api_item'] = array(
     'title' => 'Hook invocations',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -566,7 +556,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/function/theme_invokes/%api_item'] = array(
+  $items['api/%api_project/%/function/theme_invokes/%api_item'] = array(
     'title' => 'Theme invokes',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -575,7 +565,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/function/theme_references/%api_item'] = array(
+  $items['api/%api_project/%/function/theme_references/%api_item'] = array(
     'title' => 'Theme invokes',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -584,7 +574,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/function/overrides/%api_item'] = array(
+  $items['api/%api_project/%/function/overrides/%api_item'] = array(
     'title' => 'Function calls',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -594,7 +584,8 @@ function api_menu() {
     'file' => 'api.pages.inc',
   );
 
-  $items['api/%/%/constant/%api_item'] = array(
+  // Constant pages.
+  $items['api/%api_project/%/constant/%api_item'] = array(
     'title' => 'Constant',
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_simple_item',
@@ -603,7 +594,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/constant/constants/%api_item'] = array(
+  $items['api/%api_project/%/constant/constants/%api_item'] = array(
     'title' => 'Constant uses',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -612,7 +603,9 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/global/%api_item'] = array(
+
+  // Global variable pages.
+  $items['api/%api_project/%/global/%api_item'] = array(
     'title' => 'Global',
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_simple_item',
@@ -621,7 +614,9 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/property/%api_item'] = array(
+
+  // Property pages.
+  $items['api/%api_project/%/property/%api_item'] = array(
     'title' => 'Property',
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_simple_item',
@@ -630,7 +625,9 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/class/%api_item'] = array(
+
+  // Class pages.
+  $items['api/%api_project/%/class/%api_item'] = array(
     'title' => 'Class',
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_class',
@@ -639,7 +636,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/class/hierarchy/%api_item'] = array(
+  $items['api/%api_project/%/class/hierarchy/%api_item'] = array(
     'title' => 'Class hierarchy',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_class_hierarchy',
@@ -648,7 +645,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/class/uses/%api_item'] = array(
+  $items['api/%api_project/%/class/uses/%api_item'] = array(
     'title' => 'Class uses',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -657,7 +654,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/class/annotations/%api_item'] = array(
+  $items['api/%api_project/%/class/annotations/%api_item'] = array(
     'title' => 'Class annotations',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -666,7 +663,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/class/services/%api_item'] = array(
+  $items['api/%api_project/%/class/services/%api_item'] = array(
     'title' => 'Class services',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -675,7 +672,18 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/interface/%api_item'] = array(
+  $items['api/%api_project/%/class/element_invokes/%api_item'] = array(
+    'title' => 'Element uses',
+    'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
+    'page callback' => 'api_page_function_calls',
+    'page arguments' => array(5, 'element_invokes'),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+
+  // Interface pages.
+  $items['api/%api_project/%/interface/%api_item'] = array(
     'title' => 'Interface',
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_class',
@@ -684,16 +692,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/trait/%api_item'] = array(
-    'title' => 'Trait',
-    'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
-    'page callback' => 'api_page_class',
-    'page arguments' => array(4),
-    'access arguments' => array('access API reference'),
-    'type' => MENU_CALLBACK,
-    'file' => 'api.pages.inc',
-  );
-  $items['api/%/%/interface/hierarchy/%api_item'] = array(
+  $items['api/%api_project/%/interface/hierarchy/%api_item'] = array(
     'title' => 'Class hierarchy',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_class_hierarchy',
@@ -702,7 +701,16 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/interface/uses/%api_item'] = array(
+  $items['api/%api_project/%/interface/implements/%api_item'] = array(
+    'title' => 'Interface implementations',
+    'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
+    'page callback' => 'api_page_interface_implements',
+    'page arguments' => array(5),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/%/interface/uses/%api_item'] = array(
     'title' => 'Class uses',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -711,7 +719,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/interface/services/%api_item'] = array(
+  $items['api/%api_project/%/interface/services/%api_item'] = array(
     'title' => 'Class services',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -720,7 +728,20 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/service/%api_item'] = array(
+
+  // Trait pages.
+  $items['api/%api_project/%/trait/%api_item'] = array(
+    'title' => 'Trait',
+    'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
+    'page callback' => 'api_page_class',
+    'page arguments' => array(4),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+
+  // Service pages.
+  $items['api/%api_project/%/service/%api_item'] = array(
     'title' => 'Service',
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_service',
@@ -729,7 +750,7 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/service/use/%api_item'] = array(
+  $items['api/%api_project/%/service/use/%api_item'] = array(
     'title' => 'Service uses',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_function_calls',
@@ -738,8 +759,10 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
-  $items['api/%/%/group/%api_item'] = array(
-    'title' => 'Group',
+
+  // Group/topic pages.
+  $items['api/%api_project/%/group/%api_item'] = array(
+    'title' => 'Topic',
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_group',
     'page arguments' => array(4),
@@ -748,7 +771,8 @@ function api_menu() {
     'file' => 'api.pages.inc',
   );
 
-  $items['api/%/namespace/%/%'] = array(
+  // Namespace pages.
+  $items['api/%api_project/namespace/%/%'] = array(
     'title' => 'Namespace',
     'page callback' => 'api_page_namespace',
     'page arguments' => array(1, 4, 3), // project, branch, namespace
@@ -757,247 +781,263 @@ function api_menu() {
     'file' => 'api.pages.inc',
   );
 
-  foreach ($branches as $branch) {
-    $is_default = !is_null($default_branch) && ($branch->branch_name === $projects[$branch->project]['use branch']);
+  // Listing and search pages for each project/branch. Most of them can be
+  // accessed with either just the project name in the URL (meaning: go to the
+  // default branch within that project), or project and branch (for a specific
+  // branch).
 
-    // Main branch page
-    if ($is_default) {
-      $items['api/' . $branch->project] = array(
-        'title' => 'API reference',
-        'page callback' => 'api_page_branch',
-        'page arguments' => array($branch),
-        'access arguments' => array('access API reference'),
-        'type' => $branch->branch_id === $default_branch->branch_id ? MENU_NORMAL_ITEM : MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_branch',
-      'page arguments' => array($branch),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Branch home page.
+  $items['api/%api_project'] = array(
+    'title' => 'API reference',
+    'page callback' => 'api_page_branch',
+    'page arguments' => array(NULL, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/%api_branch'] = array(
+    'title' => 'API reference',
+    'page callback' => 'api_page_branch',
+    'page arguments' => array(2,1),
+    'load arguments' => array('%map'),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    // Branch search page.
-    $items['api/' . $branch->project . '/' . $branch->branch_name . '/search'] = array(
-      'title' => $branch->title,
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('api_search_form', $branch),
-      'access arguments' => array('access API reference'),
-      'type' => MENU_NORMAL_ITEM,
-    );
+  // Branch search page.
+  $items['api/%api_project/%api_branch/search'] = array(
+    'title' => 'Search',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('api_search_form', 2, TRUE),
+    'load arguments' => array('%map'),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['api/%api_project/%api_branch/search/%menu_tail'] = array(
+    'title' => 'Search',
+    'page callback' => 'api_search_listing',
+    'page arguments' => array(2, 4),
+    'load arguments' => array('%map', '%index'),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    $items['api/' . $branch->project . '/' . $branch->branch_name . '/search/%menu_tail'] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_search_listing',
-      'page arguments' => array($branch, 4),
-      'load arguments' => array('%map', '%index'),
-      'access arguments' => array('access API reference'),
-      'type' => MENU_NORMAL_ITEM,
-      'file' => 'api.pages.inc',
-    );
+  // Functions listing page.
+  $items['api/%api_project/functions'] = array(
+    'title' => 'Functions',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'function', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/functions/%api_branch'] = array(
+    'title' => 'Functions',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'function'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    // Listings within a branch.
+  // Constants listing page.
+  $items['api/%api_project/constants'] = array(
+    'title' => 'Constants',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'constant', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/constants/%api_branch'] = array(
+    'title' => 'Constants',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'constant'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/functions'] = array(
-        'title' => 'Functions',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'function'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/functions/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'function'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Globals listing page.
+  $items['api/%api_project/globals'] = array(
+    'title' => 'Globals',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'global', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/globals/%api_branch'] = array(
+    'title' => 'Globals',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'global'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/constants'] = array(
-        'title' => 'Constants',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'constant'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/constants/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'constant'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Files listing page.
+  $items['api/%api_project/files'] = array(
+    'title' => 'Files',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'file', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/files/%api_branch'] = array(
+    'title' => 'Files',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'file'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/globals'] = array(
-        'title' => 'Globals',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'global'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/globals/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'global'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Classes listing page.
+  $items['api/%api_project/classes'] = array(
+    'title' => 'Classes, traits, and interfaces',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'class', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/classes/%api_branch'] = array(
+    'title' => 'Classes, traits, and interfaces',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'class'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/files'] = array(
-        'title' => 'Files',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'file'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/files/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'file'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Groups/topics listing page.
+  $items['api/%api_project/groups'] = array(
+    'title' => 'Topics',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'group', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/groups/%api_branch'] = array(
+    'title' => 'Topics',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'group'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/classes'] = array(
-        'title' => 'Classes, traits, and interfaces',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'class'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/classes/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'class'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Namespaces listing page.
+  $items['api/%api_project/namespaces'] = array(
+    'title' => 'Namespaces',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'namespace', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/namespaces/%api_branch'] = array(
+    'title' => 'Namespaces',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'namespace'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/groups'] = array(
-        'title' => 'Topics',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'group'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/groups/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'group'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Deprecated items listing page.
+  $items['api/%api_project/deprecated'] = array(
+    'title' => 'Deprecated',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'deprecated', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/deprecated/%api_branch'] = array(
+    'title' => 'Deprecated',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'deprecated'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/namespaces'] = array(
-        'title' => 'Namespaces',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'namespace'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/namespaces/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'namespace'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Services listing page.
+  $items['api/%api_project/services'] = array(
+    'title' => 'Services',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'service', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/services/%api_branch'] = array(
+    'title' => 'Services',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'service'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/deprecated'] = array(
-        'title' => 'Deprecated',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'deprecated'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/deprecated/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'deprecated'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Elements listing page.
+  $items['api/%api_project/elements'] = array(
+    'title' => 'Elements',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(NULL, 'element', TRUE, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/elements/%api_branch'] = array(
+    'title' => 'Elements',
+    'page callback' => 'api_page_listing',
+    'page arguments' => array(3, 'element'),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    if ($is_default) {
-      $items['api/' . $branch->project . '/services'] = array(
-        'title' => 'Services',
-        'page callback' => 'api_page_listing',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch, 'service'),
-        'type' => MENU_SUGGESTED_ITEM,
-        'file' => 'api.pages.inc',
-      );
-    }
-    $items['api/' . $branch->project . '/services/' . $branch->branch_name] = array(
-      'title' => $branch->title,
-      'page callback' => 'api_page_listing',
-      'page arguments' => array($branch, 'service'),
-      'access arguments' => array('access API reference'),
-      'type' => $is_default ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
-      'file' => 'api.pages.inc',
-    );
+  // Full dump page.
+  // Note that you can put query parameters on this URL: 'limit' to limit
+  // the number of items output, and 'page' to move on to the next page if
+  // limit is set (page numbering starts at 0 just like the standard Drupal
+  // pager). Query params are optional.
+  $items['api/%api_project/full_list'] = array(
+    'title' => 'Full list of items',
+    'page callback' => 'api_dump_full_list',
+    'page arguments' => array(NULL, 1),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/full_list/%api_branch'] = array(
+    'title' => 'Full list of items',
+    'page callback' => 'api_dump_full_list',
+    'page arguments' => array(3),
+    'access arguments' => array('access API reference'),
+    'load arguments' => array('%map'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
 
-    // Dump of all documentation items in the branch.
-    // Note that you can put query parameters on this URL: 'limit' to limit
-    // the number of items output, and 'page' to move on to the next page if
-    // limit is set (page numbering starts at 0 just like the standard Drupal
-    // pager). Query params are optional.
-    if ($is_default) {
-      $items['api/' . $branch->project . '/full_list'] = array(
-        'title' => 'Full list of items',
-        'page callback' => 'api_dump_full_list',
-        'access arguments' => array('access API reference'),
-        'page arguments' => array($branch),
-        'type' => MENU_CALLBACK,
-        'file' => 'api.pages.inc',
-      );
-    }
-
-    // See note on previous block about query parameters.
-    $items['api/' . $branch->project . '/full_list/' . $branch->branch_name] = array(
-      'title' => 'Full list of items',
-      'page callback' => 'api_dump_full_list',
-      'access arguments' => array('access API reference'),
-      'page arguments' => array($branch),
-      'type' => MENU_CALLBACK,
-      'file' => 'api.pages.inc',
-    );
-  }
+  // Legacy links.
 
   // Redirect 1.0 file links.
   $items['api/file/%menu_tail'] = array(
@@ -1008,8 +1048,22 @@ function api_menu() {
     'file' => 'legacy.inc',
   );
 
-  // Redirect 1.1 links.
-  // Objects
+  // Legacy search.
+  $items['api/search'] = array(
+    'page callback' => 'drupal_goto',
+    'page arguments' => array('api/' . $default_branch->project . '/' . $default_branch->branch_name . '/search', array(), '302'),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['api/search/%api_branch/%'] = array(
+    'page callback' => 'api_legacy_search_redirect',
+    'page arguments' => array(2, 3),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'legacy.inc',
+  );
+
+  // Legacy individual object pages.
   $items['api/function/%api_legacy_1_2_object'] = array(
     'load arguments' => array('function', 3),
     'page callback' => 'drupal_goto',
@@ -1018,8 +1072,6 @@ function api_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['api/function/%api_legacy_1_2_object/%'] =  $items['api/function/%api_legacy_1_2_object'];
-
-
   $items['api/constant/%api_legacy_1_2_object'] = array(
     'load arguments' => array('constant', 3),
     'page callback' => 'drupal_goto',
@@ -1028,8 +1080,6 @@ function api_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['api/constant/%api_legacy_1_2_object/%'] = $items['api/constant/%api_legacy_1_2_object'];
-
-
   $items['api/global/%api_legacy_1_2_object'] = array(
     'load arguments' => array('global', 3),
     'page callback' => 'drupal_goto',
@@ -1038,8 +1088,6 @@ function api_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['api/global/%api_legacy_1_2_object/%'] = $items['api/global/%api_legacy_1_2_object'];
-
-
   $items['api/group/%api_legacy_1_2_object'] = array(
     'load arguments' => array('group', 3),
     'page callback' => 'drupal_goto',
@@ -1049,7 +1097,7 @@ function api_menu() {
   );
   $items['api/group/%api_legacy_1_2_object/%'] = $items['api/group/%api_legacy_1_2_object'];
 
-  // Default listings
+  // Legacy listing pages.
   $items['api/functions'] = array(
     'page callback' => 'drupal_goto',
     'page arguments' => array('api/' . $default_branch->project . '/functions', array(), '302'),
@@ -1080,13 +1128,8 @@ function api_menu() {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
-  $items['api'] = array(
-    'page callback' => 'drupal_goto',
-    'page arguments' => array('api/' . $default_branch->project, array(), '302'),
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK,
-  );
-  // Branch listings
+
+  // Legacy branch listings.
   $items['api/functions/%api_legacy_1_2_listing'] = array(
     'load arguments' => array('functions'),
     'page callback' => 'drupal_goto',
@@ -1119,12 +1162,6 @@ function api_menu() {
     'load arguments' => array('groups'),
     'page callback' => 'drupal_goto',
     'page arguments' => array(2, array(), '302'),
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK,
-  );
-  $items['api/%api_legacy_1_2_listing'] = array(
-    'page callback' => 'drupal_goto',
-    'page arguments' => array(1, array(), '302'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -1797,7 +1834,6 @@ function api_block_view($delta) {
         // Figure out if this is the default branch for this project, the same
         // way the menu system decides.
 
-        $default_branch = api_get_branch_by_id();
         $projects = _api_make_menu_projects();
         $is_default = ($branch->branch_name === $projects[$branch->project]['use branch']);
         $suffix = ($is_default) ? '' : '/' . $branch->branch_name;
@@ -1822,6 +1858,9 @@ function api_block_view($delta) {
         }
         if ($counts['services'] > 0) {
           $links[] = l(t('Services'), 'api/' . $branch->project . '/services' . $suffix);
+        }
+        if ($counts['elements'] > 0) {
+          $links[] = l(t('Elements'), 'api/' . $branch->project . '/elements' . $suffix);
         }
         if ($counts['constants'] > 0) {
           $links[] = l(t('Constants'), 'api/' . $branch->project . '/constants' . $suffix);
@@ -1872,6 +1911,7 @@ function api_listing_counts($branch) {
     'namespaces' => 0,
     'deprecated' => 0,
     'services' => 0,
+    'elements' => 0,
   );
 
   // These queries mirror what is done in the views used by api_page_listing().
@@ -1900,6 +1940,14 @@ function api_listing_counts($branch) {
     ->groupBy('branch_id');
   $query->addExpression('COUNT(*)', 'num');
   $return['classes'] = $query
+    ->execute()
+    ->fetchField();
+
+  $query = db_select('api_reference_storage', 'ars')
+    ->condition('branch_id', $branch->branch_id)
+    ->condition('object_type', array('element'));
+  $query->addExpression('COUNT(*)', 'num');
+  $return['elements'] = $query
     ->execute()
     ->fetchField();
 
@@ -2592,18 +2640,47 @@ function api_get_active_branch() {
     // If we're on an API path, it should be safe to call menu_get_item().
     $item = menu_get_item();
 
-    // See if we can extract a branch ID from a loaded component of $item.
+    // Paths that you'd find in $item['path'] for listing pages.
+    $listing_page_paths = array(
+      'api/%/functions',
+      'api/%/constants',
+      'api/%/classes',
+      'api/%/globals',
+      'api/%/files',
+      'api/%/groups',
+      'api/%/namespaces',
+      'api/%/deprecated',
+      'api/%/services',
+      'api/%/elements',
+    );
+
+    // See if this is an API item page, in which case the first page
+    // argument will be the loaded item object, with a branch ID on it.
     if (isset($item['page_arguments'][0]->branch_id)) {
       $branch = $branches[$item['page_arguments'][0]->branch_id];
     }
+    // Or we could be on a listing page, in which case the first page argument
+    // could be the branch, which would also have a branch ID.
     elseif (isset($item['page_arguments'][0]->branch_name)) {
       $branch = $item['page_arguments'][0];
     }
+    // Or it could be a listing page without the branch suffix in the URL.
+    elseif (in_array($item['path'], $listing_page_paths)) {
+      $project = $item['page_arguments'][3];
+      $branch = api_get_branch_by_name($project);
+    }
+    // Or the main project page (default branch).
+    elseif ($item['path'] == 'api/%') {
+      $project = $item['page_arguments'][1];
+      $branch = api_get_branch_by_name($project);
+    }
+    // Namespace item pages have a different format.
     elseif ($item['path'] == 'api/%/namespace/%/%') {
       $project = $item['page_arguments'][0];
       $branch_name = $item['page_arguments'][1];
       $branch = api_get_branch_by_name($project, $branch_name);
     }
+    // Search pages have a different format.
     elseif (strpos($item['path'], 'api/search') === 0 && isset($branch_names[$item['page_arguments'][0]])) {
       // This is a search page for a particular branch. Figure out what project
       // it corresponds to, using the default project if possible
@@ -2821,42 +2898,117 @@ function api_get_branches_by_name($branch_name) {
  *   The project name matching {api_branch}.project.
  * @param string $branch_name
  *   The branch name matching {api_branch}.branch_name. If not set, uses the
- *   default branch name.
+ *   default branch for this project.
  *
  * @return object|null
  *   Object representing the branch, or NULL if there is no match.
  */
-function api_get_branch_by_name($project, $branch_name) {
-  if (empty($branch_name)) {
-    $branch = api_get_branch_by_id();
-    if (isset($branch)) {
-      $branch_name = $branch->branch_name;
-    }
-    else {
-      $branch_name = '';
+function api_get_branch_by_name($project, $branch_name = NULL) {
+  $compatibility = variable_get('api_default_core_compatibility', '');
+  foreach (api_get_branches() as $branch) {
+    if ($branch->project === $project) {
+      if((!empty($branch_name) && $branch->branch_name === $branch_name) ||
+        (empty($branch_name) && $branch->core_compatibility == $compatibility && $branch->preferred)) {
+        return $branch;
+      }
+      if (!isset($fallback_branch)) {
+        $fallback_branch = $branch;
+      }
     }
   }
 
-  foreach (api_get_branches() as $branch) {
-    if ($branch->project === $project && $branch->branch_name === $branch_name) {
-      return $branch;
-    }
+  // If we didn't find a default, at least return something if possible from
+  // this project.
+  if (isset($fallback_branch)) {
+    return $fallback_branch;
   }
 
   return NULL;
 }
 
 /**
+ * Loads a branch for a hook_menu() item.
+ *
+ * Autoloader for %api_branch wildcards in api_menu().
+ *
+ * @param string $branch_name
+ *   Name of the branch to be loaded, from the path.
+ * @param string $map
+ *   (optional) Map of path arguments. If provided, it is assumed that the
+ *   project name is argument 1.
+ *
+ * @return object|false
+ *   Loaded branch, or FALSE to indicate 404 error for branch not found. The
+ *   first matching branch is returned if there is no project provided.
+ */
+function api_branch_load($branch_name, $map = NULL) {
+  if (!$branch_name) {
+    return FALSE;
+  }
+
+  if (empty($map) || !isset($map[1])) {
+    // Find any matching branch name.
+    $branches = api_get_branches_by_name($branch_name);
+    if (count($branches)) {
+      return $branches[0];
+    }
+    return FALSE;
+  }
+
+  $project = $map[1];
+  $branch = api_get_branch_by_name($project, $branch_name);
+  if ($branch) {
+    return $branch;
+  }
+  return FALSE;
+}
+
+/**
+ * Loads a project for a hook_menu() item.
+ *
+ * Autoloader for %api_project wildcards in api_menu(). Actually just verifies
+ * that it is a valid project, and returns it if so.
+ *
+ * @param string $project
+ *   Name of the project.
+ *
+ * @return string|false
+ *   $project if it exists, or FALSE if not.
+ */
+function api_project_load($project) {
+  if (!$project) {
+    return FALSE;
+  }
+  $result = db_select('api_project', 'p')
+    ->fields('p', array('project_name'))
+    ->condition('project_name', $project)
+    ->execute()
+    ->fetchField();
+  if ($result) {
+    return $project;
+  }
+
+  return FALSE;
+}
+
+/**
  * Form constructor for the API search form.
  *
- * @param $branch
+ * @param object $branch
  *   Object representing the branch to build the search form for.
+ * @param bool $set_page_title
+ *   TRUE if the page title should be set appropriate to the branch. Defaults
+ *   to FALSE.
  *
  * @see api_search_form_submit()
  */
-function api_search_form($form, $form_state, $branch) {
+function api_search_form($form, $form_state, $branch, $set_page_title = FALSE) {
   $form['#attributes']['class'] = 'api-search-form';
   $form['#branch'] = $branch;
+
+  if ($set_page_title) {
+    drupal_set_title($branch->title);
+  }
 
   $form['search'] = array(
     '#title' => t('Function, file, or topic'),
@@ -2881,6 +3033,9 @@ function api_search_form($form, $form_state, $branch) {
 function api_search_form_submit($form, &$form_state) {
   $branch = $form['#branch'];
   $form_state['redirect'] = 'api/' . $branch->project . '/' . $branch->branch_name . '/search/' . $form_state['values']['search'];
+  unset($_GET['destination']);
+  drupal_static_reset('drupal_get_destination');
+  drupal_get_destination();
 }
 
 /**

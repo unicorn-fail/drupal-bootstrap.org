@@ -72,6 +72,8 @@ interface SampleInSubDirInterface {
 
 /**
  * Subclass in a subdirectory, which tests overrides of parent class.
+ *
+ * @RenderElement("subdir_sample")
  */
 class SubInSubDirSample extends SampleInSubDir implements SampleInterfaceTwo {
   /**

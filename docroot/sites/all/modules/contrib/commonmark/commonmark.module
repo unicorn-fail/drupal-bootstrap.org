@@ -38,6 +38,30 @@ function commonmark_menu() {
   return $items;
 }
 
+/**
+ * Implements hook_registry_autoload_registry_alter().
+ */
+function commonmark_registry_autoload_registry_alter(array &$registry) {
+  if (($library_path = commonmark_get_library_path('thephpleague', 'commonmark', FALSE)) && file_exists("$library_path/src")) {
+    $autoload_searcher = new RegistryAutoloadSearcher(registry_get_parsed_files());
+    $module = (object) db_select('system', 's')->fields('s')->condition('name', 'commonmark')->execute()->fetchAssoc();
+    $class_files = $autoload_searcher->findClassFiles("$library_path/src", 'PSR-4/absolute');
+    $registry = array_merge($registry, $autoload_searcher->processFiles($class_files, $module));
+  }
+}
+
+/**
+ * Implements hook_xautoload().
+ */
+function commonmark_xautoload($adapter) {
+  /** @var \Drupal\xautoload\Adapter\LocalDirectoryAdapter $adapter */
+  $adapter->composerJson('composer.json');
+
+  if (($library_path = commonmark_get_library_path('thephpleague', 'commonmark')) && file_exists("$library_path/composer.json")) {
+    $adapter->absolute()->composerJson("$library_path/composer.json");
+  }
+}
+
 /******************************************************************************
  * Callbacks.
  *****************************************************************************/
@@ -382,6 +406,56 @@ function commonmark_get_extensions($filter = NULL, array $form_state = array(), 
   }
 
   return $extensions;
+}
+
+/**
+ * Retrieves the path to a vendor/package based library from Packagist.
+ *
+ * @param string $vendor
+ *   The vendor name.
+ * @param string $package
+ *   The package name.
+ * @param bool $absolute
+ *   Toggle determining whether or not to return an absolute path.
+ *
+ * @return string|FALSE
+ *   The path to the commonmark library or FALSE if not found.
+ */
+function commonmark_get_library_path($vendor, $package, $absolute = TRUE) {
+  $path = FALSE;
+
+  // Search directories (similar to libraries_get_libraries() implementation).
+  $directories = [
+    conf_path() . '/libraries',
+    drupal_get_path('profile', drupal_get_profile()) . '/libraries',
+    'sites/all/libraries',
+    'libraries',
+  ];
+
+  // Variant sub-directories based on the vendor or package names.
+  $variants = [
+    "$vendor/$package",
+    "$vendor-$package",
+    $vendor . '_' . $package,
+    $package,
+  ];
+
+  // Iterate over each search directory and variant.
+  foreach ($directories as $key => $directory) {
+    if (!is_dir($directory)) {
+      unset($directories[$key]);
+      continue;
+    }
+    foreach ($variants as $variant) {
+      if (file_exists("$directory/$variant")) {
+        $path = "$directory/$variant";
+        break 2;
+      }
+    }
+  }
+
+  // Return the path, absolute if necessary.
+  return $path && $absolute ? DRUPAL_ROOT . base_path() . $path : $path;
 }
 
 /******************************************************************************
