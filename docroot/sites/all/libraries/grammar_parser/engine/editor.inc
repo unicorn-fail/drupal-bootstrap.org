@@ -414,8 +414,8 @@ class PGPEditor extends PGPParser {
    *   A string of the function signature.
    */
   public function functionGetSignature($statement) {
-    if (!in_array($statement->type, array(T_INTERFACE, T_CLASS, T_FUNCTION))) {
-      return 'Expected statement type of: interface, class, or function';
+    if (!in_array($statement->type, array(T_INTERFACE, T_CLASS, T_TRAIT, T_FUNCTION))) {
+      return 'Expected statement type of: interface, class, trait, or function';
     }
 
     return $statement->signature();
@@ -559,6 +559,7 @@ class PGPEditor extends PGPParser {
     switch ($statement->type) {
       case T_INTERFACE:
       case T_CLASS:
+      case T_TRAIT:
       case T_FUNCTION:
         return $statement->printName();
         break;

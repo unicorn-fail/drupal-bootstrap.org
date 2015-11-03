@@ -21,7 +21,7 @@ const GRAMMAR_PARSER_VERSION = '2.1';
  * This parent class holds references to arrays of:
  * - tokens,
  * - statements,
- * - interfaces, classes, and functions,
+ * - interfaces, classes, traits, and functions,
  * - function calls,
  * - constants, globals, and comments.
  *
@@ -64,6 +64,13 @@ class PGPParser {
    * @var array
    */
   protected $classes = array();
+
+  /**
+   * Array of traits included in grammar statements.
+   *
+   * @var array
+   */
+  protected $traits = array();
 
   /**
    * Array of functions included in grammar statements.
@@ -208,6 +215,16 @@ class PGPParser {
    */
   public function &getClasses() {
     return $this->classes;
+  }
+
+  /**
+   * Returns array of traits included in grammar statements.
+   *
+   * @return array
+   *   An array of statements.
+   */
+  public function &getTraits() {
+    return $this->traits;
   }
 
   /**

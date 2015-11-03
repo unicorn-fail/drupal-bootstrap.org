@@ -38,7 +38,7 @@
  * @endcode
  *
  * This reader will handle a code snippet that:
- * - is based on PHP 5.3 syntax
+ * - is based on PHP 5.4 syntax
  * - includes a mixture of inline HTML and PHP code
  * - begins with either HTML or PHP code
  *
@@ -135,6 +135,13 @@ class PGPReader extends PGPParser {
    * @var boolean
    */
   private $inFunctionOrCall = FALSE;
+
+  /**
+   * Whether the current block is part of the body of a use statement.
+   *
+   * @var boolean
+   */
+  private $inUseBody = FALSE;
 
   /**
    * Whether to save whitespace information with the current item.
@@ -258,9 +265,16 @@ class PGPReader extends PGPParser {
   /**
    * Whether to reclassify the current expression to a function call.
    *
-   * @var unknown_type
+   * @var boolean
    */
   private $buildFunctionCall = FALSE; // @todo This is the same name as a function - change this.
+
+  /**
+   * Whether the current expression is part of a variable.
+   *
+   * @var boolean
+   */
+  private $buildVariable = FALSE;
 
   /**
    * Class constructor.
@@ -350,7 +364,7 @@ class PGPReader extends PGPParser {
    *
    * @param integer $type
    *   Token type of statements to build grammar for. Expected to be one of:
-   *   T_CLASS, T_FUNCTION, or T_INTERFACE.
+   *   T_INTERFACE, T_CLASS, T_TRAIT, or T_FUNCTION.
    * @param array $values
    *   A list of values to match as the name of the statement.
    * @param string $snippet
@@ -485,7 +499,7 @@ class PGPReader extends PGPParser {
           }
           else {
             // When not set to preserve whitespace, we automatically insert a
-            // newline between body statements. 
+            // newline between body statements.
             // Only save a whitespace token if more than one newline is present.
             // But subtract one (unless a newline is included in previous token).
             // As we conform newlines in whitespace tokens (to overcome this
@@ -570,7 +584,12 @@ class PGPReader extends PGPParser {
           // @todo This would incorrectly classify a class method named define.
           // To catch this, check for existence of modifiers and in a function.
           $is_define = $this->tokenValue() == 'define';
-          if ($is_define) {
+          if ($this->inUseBody) {
+            // Build a use statement without 'use' at the beginning.
+            prev($this->tokens);
+            $node->data = $this->buildUse(TRUE);
+          }
+          elseif ($is_define) {
             $node->data = $this->buildFunctionCall();
             $node->data->type = T_DEFINE;
             $this->defines[] = &$node;
@@ -798,9 +817,12 @@ class PGPReader extends PGPParser {
         case T_INTERFACE:
           $this->isInterface = TRUE;
         case T_CLASS:
-          $node->data = $this->buildClass($modifiers);
+        case T_TRAIT:
           // Store the node so we can insert statements around the class.
-          $this->isInterface ? $this->interfaces[] = &$node : $this->classes[] = &$node;
+          $items = strtolower($this->tokenValue()) . ($this->tokenType() == T_CLASS ? 'es' : 's');
+          $this->{$items}[] = &$node;
+          // Build the statement block.
+          $node->data = $this->buildClass($modifiers);
           $modifiers = new PGPList('modifiers', $this->getSettings());
           $this->isInterface = FALSE;
           break;
@@ -1251,10 +1273,12 @@ class PGPReader extends PGPParser {
             $this->functionCalls[] = &$node;
           }
           else {
+            $this->buildVariable = TRUE;
             $component = $this->buildSpecialOperators();
             $returnTokens2 = array_merge($return_tokens, $this->assignReturnTokens(), $this->operatorReturnTokens());
             // Need to merge the two expressions.
             $component = $this->buildExpression($returnTokens2, $component);
+            $this->buildVariable = FALSE;
             $this->debugPrint('component');
             $this->debugPrint($component);
             if ($this->buildFunctionCall) {
@@ -1301,10 +1325,16 @@ class PGPReader extends PGPParser {
             $node->setData('operand', $this->buildArray());
           }
           else {
+            // @todo Other variable type names fall under T_STRING and are
+            // stored as a PGPOperand object instead of an array. Consistency?
             $node->setData('operand', $this->cleanToken());
           }
           break;
 
+        case T_CALLABLE:
+        // Ex: MyClass::class; tokenizer returns T_CLASS for 'class' in
+        // expression like an interface or class property called $class.
+        case T_CLASS:
         case T_STATIC:
         case T_STRING:
           // T_STRING can be function call or name after an object operator.
@@ -1425,12 +1455,22 @@ class PGPReader extends PGPParser {
           break;
 
         case '[':
-          $isLeftParenPartOfExpr = TRUE;
-          $this->debugPrint("LEFT  lbrackets = $lbrackets <=> rbrackets = $rbrackets in $expressions next token value = " . $this->nextTokenValue());
-          // The return tokens on a variable include the right bracket. So we
-          // need to test the next character here for '->' or '[' and continue.
-          $lbrackets++;
-          $node->setData('index', $this->buildExpression(array(']'/*, '}'*/)));
+          if ($isLeftParenPartOfExpr && !$this->buildVariable) {
+            // This left bracket indicates the start of a "short syntax" array
+            // introduced in PHP 5.4.
+            $this->debugPrint('hitting left square bracket in buildExpression');
+            prev($this->tokens);
+            $node->setData('operand', $this->buildArray(TRUE));
+//             return $expression;
+          }
+          else {
+            $isLeftParenPartOfExpr = TRUE;
+            $this->debugPrint("LEFT  lbrackets = $lbrackets <=> rbrackets = $rbrackets in $expressions next token value = " . $this->nextTokenValue());
+            // The return tokens on a variable include the right bracket. So we
+            // need to test the next character here for '->' or '[' and continue.
+            $lbrackets++;
+            $node->setData('index', $this->buildExpression(array(']'/*, '}'*/)));
+          }
           break;
 
         case ']':
@@ -1628,6 +1668,7 @@ class PGPReader extends PGPParser {
           $node->setData('operand', $this->buildFunction($modifiers));
           // Do not store in function list as it has no name.
 //           $this->functions[] = &$node;
+          $this->isAnonymous = FALSE;
           break;
 
         case T_USE:
@@ -1640,6 +1681,7 @@ class PGPReader extends PGPParser {
         case T_FUNC_C:
         case T_LINE:
         case T_METHOD_C:
+        case T_TRAIT_C:
           $node->setData('operand', $this->tokenValue());
           break;
 
@@ -1668,6 +1710,13 @@ class PGPReader extends PGPParser {
 
         case T_NS_C:
           $node->setData('operand', $this->tokenValue());
+          break;
+
+        case T_PUBLIC:
+        case T_PRIVATE:
+        case T_PROTECTED:
+          // Occurs in use statement inside class or trait.
+          $node->setData('modifier', $this->tokenValue());
           break;
 
         default:
@@ -1774,17 +1823,21 @@ class PGPReader extends PGPParser {
   /**
    * Builds an array expression.
    *
+   * @param boolean $short_syntax
+   *   (optional) Whether the short syntax was found in tokens.
+   *
    * @return PGPAssignment
    *   A grammar object of the expression.
    */
-  private function buildArray() {
+  private function buildArray($short_syntax = FALSE) {
     $this->debugPrint(__FUNCTION__);
 
     // Create object.
     $expression = new PGPArray();
-    $expression->type = $this->tokenType();
+    $expression->type = $short_syntax ? T_ARRAY : $this->tokenType();
     $expression->multiline = FALSE;
     $expression->original = FALSE;
+    $expression->short_syntax = $short_syntax;
     $expression->count = 0;
     $expression->values = new PGPList();
 
@@ -1841,6 +1894,7 @@ class PGPReader extends PGPParser {
           break;
 
         case '(':
+        case '[': // PHP 5.4 syntax
           // This is the left parenthesis following 'array'.
           // Possibly store whitespace to left of this token.
           $lparens++;
@@ -1850,6 +1904,7 @@ class PGPReader extends PGPParser {
           break;
 
         case ')':
+        case ']': // PHP 5.4 syntax
           if (!is_null($temp) && !$temp->isEmpty()) {
             // Case 1: Last thing is a value not followed by comma.
             // Case 2: Last thing is only a comment and/or whitespace.
@@ -2168,6 +2223,7 @@ class PGPReader extends PGPParser {
 
     // Local items.
     $name = 0;
+    $pre = 0;
 
     while (next($this->tokens) !== FALSE) {
       $this->debugPrint('while buildFunctionCall');
@@ -2208,6 +2264,7 @@ class PGPReader extends PGPParser {
           break;
 
         default:
+          // @todo Order of if blocks differs from buildFunction(): should it?
           if (!$name++) {
             prev($this->tokens);
             if ($this->nextRealToken() == '(') {
@@ -2228,6 +2285,14 @@ class PGPReader extends PGPParser {
                 $expression->parameters->insertLast($parameter);
               }
               $this->inFunctionOrCall = FALSE;
+            }
+          }
+          elseif (!$pre++ && $this->nextRealToken() == '(') {
+            prev($this->tokens);
+            // Capture anything before parameters.
+            $stuff = $this->buildExpression(array('('));
+            if (!$stuff->isEmpty()) {
+              $expression->pre = $stuff;
             }
           }
           else {
@@ -2383,7 +2448,7 @@ class PGPReader extends PGPParser {
   }
 
   /**
-   * Builds a class or interface statement block.
+   * Builds an interface, class, or trait statement block.
    *
    * @param PGPList $modifiers
    *   A list of modifiers (e.g. public, private) for the statement block.
@@ -2626,6 +2691,7 @@ class PGPReader extends PGPParser {
       }
       switch ($this->tokenType()) {
         case '(':
+          $pre++;
           $block->conditions = new PGPList('conditions', $this->getSettings());
           $block->conditions->insertLast($this->buildExpression($this->logicalReturnTokens()), 'condition');
           break;
@@ -2855,6 +2921,7 @@ class PGPReader extends PGPParser {
           $condition_to_set++;
           $condition = $conditions[$condition_to_set];
         case '(':
+          $pre++;
           $block->$condition = new PGPList('condition', $this->getSettings());
         case ',':
           // This handles multiple conditions differently than buildConditional.
@@ -2957,6 +3024,7 @@ class PGPReader extends PGPParser {
       $this->debugPrint($this->tokenType());
       switch ($this->tokenType()) {
         case '(':
+          $pre++;
           $block->initial = $this->buildExpression(array(T_AS));
           break;
 
@@ -3111,7 +3179,7 @@ class PGPReader extends PGPParser {
     $block = new PGPDeclare();
 //     $block->comment = $this->comment; // @todo Is this a valid item for this statement? Or a leftover item from copy and paste?
     $block->type = $this->tokenType();
-    $block->nobraces = 0;
+    $block->nobraces = 1;
     $this->getSettings($block);
 
     // Global items.
@@ -3119,14 +3187,12 @@ class PGPReader extends PGPParser {
 
     // Local items.
     $pre = 0;
+    $body_captured = FALSE;
 
     while (next($this->tokens) !== FALSE) {
       switch ($this->tokenType()) {
-        case T_STRING:
-          $block->name = $this->tokenValue(); // @todo Is this a valid item for this statement? Or a leftover item from copy and paste?
-          break;
-
         case '(':
+          $pre++;
           $block->parameters = new PGPList('parameters', $this->getSettings());
 //        case ',':
           $block->parameters->insertLast($this->buildExpression(array(',', ')')));
@@ -3182,6 +3248,16 @@ class PGPReader extends PGPParser {
               $block->pre = $stuff;
             }
           }
+          elseif ($block->nobraces == 1 && !$body_captured) {
+            $statements_to_return = $this->tokenType() == T_TRY ? 2 : 1;
+            prev($this->tokens);
+            $block->body = $this->buildBody(array(';'), $statements_to_return);
+            $body_captured = TRUE;
+          }
+          elseif ($block->nobraces == 1 && $body_captured) {
+            prev($this->tokens);
+            return $block;
+          }
           else {
             $block->warning = 'unexpected syntax in ' . __METHOD__ . '(' . __LINE__ . ')';
             $block->extra = $this->cleanToken();
@@ -3215,6 +3291,7 @@ class PGPReader extends PGPParser {
     while (next($this->tokens) !== FALSE) {
       switch ($this->tokenType()) {
         case '(':
+          $pre++;
           $block->exception = $this->buildExpression(array(')'));
           break;
 
@@ -3391,6 +3468,7 @@ class PGPReader extends PGPParser {
       $this->printToken();
       switch ($this->tokenType()) {
         case '(':
+          $pre++;
           $expression->parameters = new PGPList('parameters', $this->getSettings());
         case ',':
           $expression->parameters->insertLast($this->buildExpression(array(',', ';', T_CLOSE_TAG)));
@@ -3529,14 +3607,16 @@ class PGPReader extends PGPParser {
    * @return PGPUse
    *   An object of the statement.
    */
-  private function buildUse() {
+  private function buildUse($in_body = FALSE) {
     $this->debugPrint(__FUNCTION__);
 
     // Create object.
     $expression = new PGPUse();
     $expression->comment = $this->comment;
-    $expression->type = $this->tokenType();
+    $expression->type = $in_body ? T_USE : $this->tokenType(); // @todo Will this ever not be T_USE?
     $expression->semicolon = TRUE;
+    $expression->nobraces = 1;
+    $expression->nouse = $in_body; // Means to not print 'use' at beginning.
     $expression->values = new PGPList('values', $this->getSettings());
     $this->getSettings($expression);
 
@@ -3556,29 +3636,47 @@ class PGPReader extends PGPParser {
           $is_alias = FALSE;
           $temp = NULL; // Necessary?
           $expression->values->insertLast($this->tokenValue(), 'comma');
-          $temp = $this->buildExpression(array(',', T_AS, ';'));
+          $temp = $this->buildExpression(array(',', T_AS, T_INSTEADOF, ';', '{'));
           break;
 
         case T_AS:
+        case T_INSTEADOF:
+          // @todo Only allowed outside of class or trait.
           $is_alias = TRUE;
           $expression->values->insertLast($temp, 'name');
           $temp = NULL; // Necessary?
-          $expression->values->insertLast($this->tokenValue(), 'as');
-          $temp = $this->buildExpression(array(',', T_AS, ';'));
+          $expression->values->insertLast($this->tokenValue(), 'operator');
+          $temp = $this->buildExpression(array(',', T_AS, T_INSTEADOF, ';', '{'));
           break;
 
         case ';':
           $type = $is_alias ? 'alias' : 'name';
           $expression->values->insertLast($temp, $type);
           $expression->semicolon = TRUE;
-          prev($this->tokens); // Try to catch semi-colons in buildBody!!!
+          return $expression;
+          break;
+
+        case '{':
+          // @todo Only allowed inside of class or trait.
+          $type = $is_alias ? 'alias' : 'name';
+          $expression->values->insertLast($temp, $type);
+          // Build body.
+          $this->inUseBody = TRUE;
+          $expression->nobraces = 0;
+          $expression->semicolon = FALSE;
+          $expression->bodyComment = $this->buildBodyComment();
+          $expression->body = $this->buildBody();
+          $this->inUseBody = FALSE;
+          break;
+
+        case '}':
           return $expression;
           break;
 
         default:
           if ($expression->values->isEmpty()) {
             prev($this->tokens);
-            $temp = $this->buildExpression(array(',', T_AS, ';'));
+            $temp = $this->buildExpression(array(',', T_AS, T_INSTEADOF, ';', '{'));
           }
           else {
             // @todo Unreachable code.
@@ -3635,6 +3733,7 @@ class PGPReader extends PGPParser {
           T_FUNCTION,
           T_INTERFACE,
           T_CLASS,
+          T_TRAIT, // @todo Add namespace to this list?
         );
         // @todo This will not identify a document comment if the next statement
         // begins with a "prepend" item.

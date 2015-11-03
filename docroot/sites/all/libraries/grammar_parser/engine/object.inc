@@ -397,8 +397,8 @@ class PGPBase {
    * @param string $direction
    *   (optional) Direction in which to traverse the list.
    *
-   * @return mixed
-   *   The object meeting the search criteria, its node, or FALSE.
+   * @return array
+   *   The list of elements meeting the search criteria.
    */
   public function searchAll($class, $member, $key, $value, $return_node = FALSE, $direction = 'forward') {
 //    $this->debugPrint(__METHOD__);
@@ -461,8 +461,8 @@ class PGPBase {
    * @param string $direction
    *   (optional) Direction in which to traverse the list.
    *
-   * @return mixed
-   *   The object meeting the search criteria, its node, or FALSE.
+   * @return array
+   *   The list of elements meeting the search criteria.
    */
   public function searchAny($value, $return_item = GP_RETURN_DATA, $direction = 'forward') {
 //    $this->debugPrint(__METHOD__);
@@ -779,7 +779,7 @@ class PGPArray extends PGPBase {
     $space = ''; // Never used; it is calculated on each while iteration
     $add_indent = FALSE;
     $increase_indent = FALSE;
-    $string = 'array';
+    $string = !$this->short_syntax ? 'array' : '';
 
     $current = $expression->values->first();
     while ($current->next != NULL) {
@@ -876,6 +876,7 @@ class PGPArray extends PGPBase {
           // @todo Suppress this here and do at end. OR do here now since only have one rparens.
 //           $rparens++;
 //           $string .= $element;
+          $rparens_element = $element;
           break;
 
           // @todo The following cases are not deprecated, but operand above is.
@@ -945,7 +946,7 @@ class PGPArray extends PGPBase {
     }
     $this->debugPrint("$string");
     if ($lparens > $rparens) {
-      $string .= ')';
+      $string .= $rparens_element;
     }
     $this->debugPrint("$string");
 
@@ -1507,6 +1508,13 @@ class PGPFunctionCall extends PGPBase {
   public $noparens;
 
   /**
+   * Text before parameters.
+   *
+   * @var PGPExpression
+   */
+  public $pre;
+
+  /**
    * Statement parameters.
    *
    * @var PGPList
@@ -1579,6 +1587,12 @@ class PGPFunctionCall extends PGPBase {
 
         case 'noparens':
           $noparens = $element;
+          break;
+
+        case 'pre':
+          if (is_object($element)) {
+            $string .= $space . $element->toString();
+          }
           break;
 
         case 'parameters':
@@ -2213,7 +2227,9 @@ class PGPAssignment extends PGPBase {
    * @param string $member
    *   Name of the member to evaluate.
    * @param string $key
-   *   Name of the key of member to evaluate.
+   *   Name of the key of member to evaluate. Extended syntax for this class is
+   *   key:item where item is 'variable' or 'expression' as in an assignment
+   *   like variable = expression.
    * @param string $value
    *   Element value to be matched.
    *
@@ -2226,25 +2242,70 @@ class PGPAssignment extends PGPBase {
 
     switch ($member) {
       case 'name':
+        // Applies to statements like break and continue. See class docblock.
         return (isset($this->name) && !is_array($this->name) && $this->name == $value);
         break;
 
       case 'values':
-        $expression = $this->values->getElement($key);
-        // @todo From this depth need to be able to tell it to search:
-        // - any class
-        // - any key
-        // @todo Clean whitespace and comments, then evaluate; or loop and count operands
-//        if ($expression->count() != 1) return FALSE;
-        $operand = $expression->getElement();
-        if ($operand instanceof PGPOperand) {
-          $this->debugPrint('expression');
-          $this->debugPrint($expression);
-          $type = $operand->getElement(0);
-          $value2 = $operand->getElement(1);
-          return (/*$type == T_VARIABLE &&*/ $value2 == $value); // @todo Why restrict to T_VARIABLE?
+        $item = '';
+        if (strpos($key, ':') !== FALSE) {
+          list($key, $item) = explode(':', $key);
+        }
+        if (empty($item) || $item == 'variable') {
+          $variable = $this->getVariable();
+          return $variable == $value;
+        }
+        elseif ($item == 'expression') {
+          $assignor = $this->getValue();
+          // Recurse on this element's members.
+          $temp = $assignor->searchAny($value);
+          return !empty($temp);
+        }
+        else {
+          return FALSE;
         }
         break;
+    }
+    return FALSE;
+  }
+
+  /**
+   * Returns the assignment variable operand.
+   *
+   * @param boolean $strip
+   *   (optional) Indicates whether to strip the expression of inline comments
+   *   and whitespace.
+   * @param integer $return_item
+   *   (optional) Indicates whether to return the node object or its data.
+   *
+   * @return string|PGPOperand
+   *   The variable being assigned to.
+   */
+  function getVariable($strip = TRUE, $return_item = GP_RETURN_DATA) {
+    $this->debugPrint(__METHOD__);
+
+    if (isset($this->name)) {
+      // This is not an assignment statement.
+      return FALSE;
+    }
+
+    $expression = $this->values->getElement(0);
+    if (empty($expression)) {
+      // Element zero not found.
+      return FALSE;
+    }
+
+    $operand = $expression->getElement();
+    if ($operand instanceof PGPOperand) {
+      $this->debugPrint($expression, 'expression');
+      $type = $operand->getElement(0);
+      $value = $operand->getElement(1);
+      if ($return_item == GP_RETURN_OPERAND) {
+        return $operand;
+      }
+      else {
+        return $value;
+      }
     }
     return FALSE;
   }
@@ -2316,7 +2377,7 @@ class PGPAssignment extends PGPBase {
 }
 
 /**
- * Grammar Parser interface, class or function statement block class.
+ * Grammar Parser interface, class, trait or function statement block class.
  *
  * The order of the members is important so as to be able to use a foreach
  * statement to print the object.
@@ -2449,7 +2510,7 @@ class PGPClass extends PGPBase {
   }
 
   /**
-   * Returns the text of an interface, class or function statement block.
+   * Returns the text of an interface, class, trait or function statement block.
    *
    * @param string $indent
    *   (optional) Line indent string.
@@ -2801,7 +2862,7 @@ class PGPClass extends PGPBase {
     $this->debugPrint(__METHOD__);
 
     if ($variable = $this->getParameterVariable($index)) {
-      return $variable->toString();
+      return $variable->trim("'\"& "); // @todo Add '&' to charlist in PGPExpression::trim()?
     }
     return '';
   }
@@ -4105,10 +4166,77 @@ class PGPUse extends PGPBase {
 
     $expression = $this; // @todo Why use this variable name now?
 
-    $add_space = 1;
-    $string = $indent . $prepend . 'use';
+    $add_space = 0;
+    $string = $indent . $prepend;
+    foreach ($expression as $key => $element) {
+      $this->debugPrint("inside $key");
+      $space = PGPWriter::getWhitespace($this->settings(), $add_space);
+      switch ($key) {
+        case 'type':
+          if (!$expression->nouse) {
+            $type = PGPWriter::statementTypeToString($element);
+            $string .= /*$space .*/ $type;
+            $add_space = -1;
+          }
+          break;
 
-    $current = $expression->values->first();
+        case 'values':
+          // Add list of use items.
+          if (is_object($element)) {
+            // @todo Enhance PGPList::toString() to be able to use next line.
+//             $string .= $space . $element->toString();
+            $string .= $space . $expression->valuesToString();
+          }
+          break;
+
+        case 'body':
+          // @todo Copied from PGPClass; all may not apply.
+          if ($this->preserveWhitespace && $expression->nobraces) {
+            // This case should not occur on interface, class, or function.
+            // Allow for no braces with an empty body.
+            $open_brace = $close_brace = '';
+          }
+          else {
+            // Include body comment following the block beginning token.
+            $space2 = PGPWriter::getWhitespace($this->settings());
+            $open_brace = isset($expression->bodyComment) && $expression->bodyComment ? '{' . $space2 . $expression->bodyComment : '{';
+            if (TRUE || !is_object($expression->name)) {
+              // Indent closing brace on anonymous function.
+              $indent = PGPWriter::getIndent($this->settings());
+            }
+            $close_brace = $this->preserveWhitespace ? '}' : "\n" . $indent . '}';
+          }
+
+          $string .= $space . $open_brace;
+          if (isset($element) && !$element->isEmpty()) {
+            $string .= PGPWriter::getDelimiter($this->settings());
+            $string .= $element->toString();
+          }
+          $string .= $close_brace;
+          break;
+      }
+      if ($add_space <= 0) {
+        $add_space++;
+      }
+    }
+    $string .= isset($expression->semicolon) && $expression->semicolon ? ';' : '';
+    return $string;
+  }
+
+  /**
+   * Returns the text of an use statement.
+   *
+   * @return string
+   *   The text of the use items.
+   *
+   * @todo Enhance PGPList::toString() so it will handle this.
+   */
+  public function valuesToString() {
+    $this->debugPrint(__METHOD__);
+
+    $add_space = 1;
+    $string = '';
+    $current = $this->values->first();
     while ($current->next != NULL) {
       $key = $current->type;
       $element = $current->data;
@@ -4124,7 +4252,7 @@ class PGPUse extends PGPBase {
           $string .= $space . $element->toString();
           break;
 
-        case 'as':
+        case 'operator':
           $string .= $space . $element;
           break;
 
@@ -4139,19 +4267,28 @@ class PGPUse extends PGPBase {
 
       $current = $current->next;
     }
-    $string .= isset($expression->semicolon) && $expression->semicolon ? ';' : '';
     return $string;
   }
 
   /**
-   * Returns an associative array of classes keyed by alias.
+   * Returns an associative array of classes or methods keyed by alias.
+   *
+   * If the 'instead of' mappings are requested, then the array is keyed by the
+   * instead value.
+   *
+   * @param string $group
+   *   (optional) The group of class or method items to return. Either 'alias',
+   *   'instead', or blank to return all.
+   * @param string $include_modifier
+   *   (optional) Whether to include the scope modifier in the alias. (Not used)
    *
    * @return array
    *   An array of the classes keyed by alias.
    */
-  public function aliasesToArray() {
+  public function valuesToArray($group = '', $include_modifier = FALSE) {
     $this->debugPrint(__METHOD__);
 
+    $bucket = 'alias';
     $return = array();
     if ($this->values instanceof PGPList) {
       $last_is_name = FALSE;
@@ -4163,18 +4300,22 @@ class PGPUse extends PGPBase {
             // Use class name as the alias.
             $alias = $name_expression->findNode('operand', 'backward')->toString();
             $name = $name_expression->toString();
-            $return[$alias] = $name;
+            $return[$bucket][$alias] = $name;
           }
           $name_expression = $current->data->stripComments();
           $last_is_name = TRUE;
+        }
+        elseif ($type == 'operator') {
+          $bucket = $current->data == 'as' ? 'alias' : 'instead'; // @todo Use type as is?
         }
         elseif ($type == 'alias') {
           $alias = $current->data->stripComments()->toString();
           $last_is_name = FALSE;
           if (isset($name_expression)) {
             $name = $name_expression->toString();
-            $return[$alias] = $name;
+            $return[$bucket][$alias] = $name;
             $name_expression = NULL;
+            $bucket = 'alias';
           }
         }
         $current = &$current->next;
@@ -4183,10 +4324,44 @@ class PGPUse extends PGPBase {
         // Use class name as the alias.
         $alias = $name_expression->findNode('operand', 'backward')->toString();
         $name = $name_expression->toString();
-        $return[$alias] = $name;
+        $return[$bucket][$alias] = $name;
       }
     }
+    return isset($return[$group]) ? $return[$group] : $return;
+  }
 
-    return $return;
+  /**
+   * Returns an associative array of classes or methods keyed by alias.
+   *
+   * If the 'instead of' mappings are requested, then the array is keyed by the
+   * instead value.
+   *
+   * @param string $group
+   *   (optional) The group of class or method items to return. Either 'alias',
+   *   'instead', or blank to return all.
+   * @param string $include_modifier
+   *   (optional) Whether to include the scope modifier in the alias. (Not used)
+   *
+   * @return array
+   *   An array of the classes keyed by alias.
+   */
+  public function bodyValuesToArray($group = '', $include_modifier = FALSE) {
+    $this->debugPrint(__METHOD__);
+
+    $return = array();
+    $current = $this->body->first();
+    while ($current->next != NULL) {
+      $statement = $current->data;
+      $type = is_object($statement) ? $statement->type : $statement['type'];
+      switch ($type) {
+        case T_USE:
+          $new = $statement->valuesToArray();
+          $return = array_merge_recursive($return, $statement->valuesToArray());
+          break;
+      }
+      $current = $current->next;
+    }
+
+    return isset($return[$group]) ? $return[$group] : $return;
   }
 }

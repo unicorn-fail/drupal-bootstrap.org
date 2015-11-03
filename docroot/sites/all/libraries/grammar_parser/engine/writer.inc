@@ -334,6 +334,9 @@ class PGPWriter extends PGPParser {
       case T_USE:
         return 'use';
 
+      case T_TRAIT:
+        return 'trait';
+
       default:
         return 'UNKNOWN-TYPE';
     }

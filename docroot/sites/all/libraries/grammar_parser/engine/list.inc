@@ -526,7 +526,7 @@ class PGPList {
    *   The data to store on the node.
    *
    * @return PGPNode
-   *   The node that was updated or NULL if no node exists at $index.
+   *   The node that was updated or NULL if no node exists at $current.
    */
   public function &update(&$current, &$data) {
 //    $this->debugPrint(__METHOD__);
@@ -1382,7 +1382,7 @@ class PGPList {
     // Get the node containing this list.
     $parent = $this->parent;
     $statement = $parent->data;
-    if (is_object($statement) && isset($statement->type) && in_array($statement->type, array(T_INTERFACE, T_CLASS, T_FUNCTION))) {
+    if (is_object($statement) && isset($statement->type) && in_array($statement->type, array(T_INTERFACE, T_CLASS, T_TRAIT, T_FUNCTION))) {
       // Stop outward recursion if one of these objects is found.
       return $items;
     }
@@ -2167,6 +2167,7 @@ class PGPBody extends PGPList {
 
         case T_INTERFACE:
         case T_CLASS:
+        case T_TRAIT:
         case T_FUNCTION:
           $string = $statement->toString($indent, $prepend);
           break;
@@ -2534,6 +2535,10 @@ class PGPExpression extends PGPList {
 
         case 'special': // PGPString
           $string .= $space . '"' . $data->toString($indent) . '"';
+          break;
+
+        case 'modifier': // PGPExpression on a PGPUse statement body block
+          $string .= $space . $data;
           break;
 
         // For a variable expression.
@@ -3002,11 +3007,11 @@ class PGPString extends PGPExpression {
       switch ($type) {
         case 'begin':
         case 'end':
+        case 'close':
           $string .= $data;
           break;
 
         case 'open':
-        case 'close':
           $string .= $data['value'];
           break;
 
