@@ -111,6 +111,10 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
       $lang = 'php';
       break;
 
+    case 'twig':
+      $lang = 'twig';
+      break;
+
     default:
       $lang = 'none';
   }
@@ -154,7 +158,7 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
     $build['#theme_wrappers'] = array('fieldset__api__file_source');
     $build['#title'] = t('Source');
     $build['#collapsible'] = TRUE;
-    $build['#collapsed'] = !($object->object_type === 'file' && preg_match('/\.tpl\.php$/', $object->file_name));
+    $build['#collapsed'] = !($object->object_type === 'file' && preg_match('/(\.tpl\.php|\.html\.twig)$/', $object->file_name));
     $build['#id'] = 'source-wrapper';
   }
 
