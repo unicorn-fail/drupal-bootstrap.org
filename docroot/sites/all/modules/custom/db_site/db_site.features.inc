@@ -5,6 +5,26 @@
  */
 
 /**
+ * Implements hook_views_default_views_alter().
+ */
+function db_site_views_default_views_alter(&$data) {
+  if (isset($data['api_listings'])) {
+    $data['api_listings']->display['block_files']->display_options['style_options']['columns']['deprecated'] = 'object_name'; /* WAS: 'title' */
+    $data['api_listings']->display['block_files']->display_options['style_options']['default'] = -1; /* WAS: 'title' */
+    unset($data['api_listings']->display['block_class']->display_options['fields']['file_name']);
+    unset($data['api_listings']->display['block_files']->display_options['fields']['title']);
+    unset($data['api_listings']->display['block_files']->display_options['style_options']['columns']['title']);
+    unset($data['api_listings']->display['block_files']->display_options['style_options']['info']['title']);
+    unset($data['api_listings']->display['default']->display_options['fields']['file_name']);
+    unset($data['api_listings']->display['default']->display_options['use_ajax']);
+  }
+  if (isset($data['api_references'])) {
+    unset($data['api_references']->display['default']->display_options['fields']['file_name']);
+    unset($data['api_references']->display['default']->display_options['use_ajax']);
+  }
+}
+
+/**
  * Implements hook_default_git_clone().
  */
 function db_site_default_git_clone() {
