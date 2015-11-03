@@ -346,17 +346,8 @@ function db_api_api_parse_functions_alter(array &$parse_functions) {
  * Implements hook_menu_alter().
  */
 function db_api_menu_alter(&$items) {
-  // The rest of the menu items require there to be at least one branch.
-  $branches = api_get_branches();
-  if (!count($branches)) {
-    return $items;
-  }
-  foreach ($branches as $branch) {
-    if (isset($items['api/' . $branch->project])) {
-      $items['api/' . $branch->project]['title'] = t('Documentation');
-    }
-    $items['api/' . $branch->project . '/' . $branch->branch_name]['type'] = MENU_NORMAL_ITEM;
-  }
+  $items['api/%api_project']['title'] = t('Documentation');
+  $items['api/%api_project/%api_branch']['type'] = MENU_NORMAL_ITEM;
 }
 
 /*****************************************************************************
