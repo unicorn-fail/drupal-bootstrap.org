@@ -16,8 +16,6 @@
  */
 ?>
 
-<?php print $alternatives; ?>
-
 <?php print _db_api_display_documentation($object, $documentation); ?>
 
 <?php print _db_api_display_see_also($see); ?>

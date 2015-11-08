@@ -32,7 +32,6 @@ function bootstrap_subtheme_block_view_api_navigation_alter(&$data, $block) {
     $suffix = ($is_default) ? '' : '/' . $branch->branch_name;
 
     $types = array(
-      '' => $branch->title,
       'groups' => t('Topics'),
       'classes' => t('Classes'),
       'functions' => t('Functions'),

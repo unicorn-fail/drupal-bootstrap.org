@@ -18,6 +18,10 @@ a[target="_blank"]:after {
   top: 1px;
 }
 
+h1:first-child, h2:first-child {
+  margin-top: 0;
+}
+
 ul, ol {
   padding-left: 2em;
   word-break: break-word;
