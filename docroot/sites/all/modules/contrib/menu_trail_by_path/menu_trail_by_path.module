@@ -78,7 +78,9 @@ function menu_trail_by_path_page_delivery_callback_alter() {
       }
       // Otherwise, use slow method to find out the title of a page.
       elseif ($menu_item = menu_get_item($link_path)) {
-        $breadcrumbs[] = l($menu_item['title'], $link_path);
+        if (!empty($menu_item['title'])) {
+          $breadcrumbs[] = l($menu_item['title'], $link_path);
+        }
       }
     }
     drupal_set_breadcrumb($breadcrumbs);

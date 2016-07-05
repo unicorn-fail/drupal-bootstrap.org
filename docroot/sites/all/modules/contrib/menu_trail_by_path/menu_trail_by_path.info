@@ -7,9 +7,9 @@ dependencies[] = path
 dependencies[] = system (>=7.12)
 configure = admin/structure/menu_trail_by_path
 
-; Information added by drupal.org packaging script on 2013-10-01
-version = "7.x-2.0+4-dev"
+; Information added by Drupal.org packaging script on 2016-03-13
+version = "7.x-2.0+5-dev"
 core = "7.x"
 project = "menu_trail_by_path"
-datestamp = "1380586942"
+datestamp = "1457891041"
 

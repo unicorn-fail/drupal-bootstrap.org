@@ -1,13 +1,25 @@
 <?php
 /**
  * @file
- * breadcrumb.vars.php
+ * Stub file for "breadcrumb" theme hook [pre]process functions.
  */
 
 /**
- * Implements hook_preprocess_breadcrumb().
+ * Pre-processes variables for the "breadcrumb" theme hook.
+ *
+ * See theme function for list of available variables.
+ *
+ * @see bootstrap_breadcrumb()
+ * @see theme_breadcrumb()
+ *
+ * @ingroup theme_preprocess
  */
 function bootstrap_preprocess_breadcrumb(&$variables) {
+  // Do not modify breadcrumbs if the Path Breadcrumbs module should be used.
+  if (_bootstrap_use_path_breadcrumbs()) {
+    return;
+  }
+
   $breadcrumb = &$variables['breadcrumb'];
 
   // Optionally get rid of the homepage link.
