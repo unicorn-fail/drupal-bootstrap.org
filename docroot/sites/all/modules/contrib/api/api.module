@@ -3336,15 +3336,6 @@ function api_libraries_loaded($watchdog = TRUE) {
     return FALSE;
   }
 
-  $version = explode('.', PHP_VERSION);
-  if ($version[0] < 5 || $version[1] < 4) {
-    if ($watchdog) {
-      watchdog('api', 'This version of the API module requires PHP 5.4 or later for parsing', WATCHDOG_ERROR);
-    }
-    $loaded = FALSE;
-    return FALSE;
-  }
-
   $loaded = TRUE;
   return TRUE;
 }

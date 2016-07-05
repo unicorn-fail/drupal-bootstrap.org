@@ -3,7 +3,7 @@ description = Generates and displays API documentation pages.
 package = Development
 core = 7.x
 configure = admin/config/development/api
-php = 5.3
+php = 5.4
 dependencies[] = node
 dependencies[] = ctools
 dependencies[] = gplib (>=2.1,<3.0)
