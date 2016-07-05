@@ -1,0 +1,27 @@
+From 21cfe863f0a1dfc7b587eedd92c045bce5f01ab3 Mon Sep 17 00:00:00 2001
+From: Tadej Basa <tadej.basa@gmail.com>
+Date: Wed, 27 Jan 2016 11:41:21 +0100
+Subject: [PATCH] Reverting change from https://www.drupal.org/node/2528736
+ which screwed up optional contexts.
+
+---
+ includes/context.inc | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/includes/context.inc b/includes/context.inc
+index 74ba35c..e9bf40c 100644
+--- a/includes/context.inc
++++ b/includes/context.inc
+@@ -204,9 +204,6 @@ class ctools_context_required {
+  */
+ class ctools_context_optional extends ctools_context_required {
+   var $required = FALSE;
+-  function __construct() {
+-    parent::__construct(NULL);
+-  }
+ 
+   /**
+    * Add the 'empty' context which is possible for optional
+-- 
+1.9.3
+
