@@ -6,7 +6,6 @@ version = 7.x-1.2
 dependencies[] = api
 dependencies[] = entity
 dependencies[] = features
-dependencies[] = git_clone
 features[features_api][] = api:2
 features[features_override_items][] = views_view.api_listings
 features[features_override_items][] = views_view.api_references
