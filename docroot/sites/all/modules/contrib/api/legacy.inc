@@ -42,12 +42,12 @@ function api_file_redirect() {
   }
   $file->object_name = implode('/', array_slice($args, 0, $end + 1));
 
-  drupal_goto(api_url($file) . $suffix);
+  drupal_goto(api_url($file) . $suffix, [], 301);
 }
 
 /**
  * Redirects old search URL.
  */
 function api_legacy_search_redirect($branch, $search_term) {
-  drupal_goto('api/' . $branch->project . '/' . $branch->branch_name . '/search/' . $search_term);
+  drupal_goto('api/' . $branch->project . '/' . $branch->branch_name . '/search/' . $search_term, [], 301);
 }

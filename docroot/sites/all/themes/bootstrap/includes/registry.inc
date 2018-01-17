@@ -46,7 +46,6 @@
  * or "template" as these are detected and automatically added.
  *
  * @see bootstrap_theme_registry_alter()
- * @see bootstrap_hook_theme_complete()
  * @see bootstrap_theme()
  * @see hook_theme()
  */
@@ -109,7 +108,7 @@ function bootstrap_theme_registry_alter(&$registry) {
   }
 
   // Inject the "footer" variable default in the existing "table" hook.
-  // @see https://drupal.org/node/806982
+  // @see https://www.drupal.org/node/806982
   // @todo Make this discoverable in some way instead of a manual injection.
   $registry['table']['variables']['footer'] = NULL;
 
@@ -249,14 +248,14 @@ function _bootstrap_process_theme_registry(&$registry, $themes) {
 
         // Setup a default "context" variable. This allows #context to be passed
         // to every template and theme function.
-        // @see https://drupal.org/node/2035055
+        // @see https://www.drupal.org/node/2035055
         if (isset($info['variables']) && !isset($info['variables']['context'])) {
           $registry[$hook]['variables']['context'] = array();
         }
 
         // Setup a default "icon" variable. This allows #icon to be passed
         // to every template and theme function.
-        // @see https://drupal.org/node/2219965
+        // @see https://www.drupal.org/node/2219965
         if (isset($info['variables']) && !isset($info['variables']['icon'])) {
           $registry[$hook]['variables']['icon'] = NULL;
         }
@@ -330,7 +329,7 @@ function _bootstrap_registry_sort_phase_functions(&$functions, $hook, $phase, $t
  * @return array
  *   The functions found, suitable for returning from hook_theme;
  *
- * @see https://drupal.org/node/939462
+ * @see https://www.drupal.org/node/939462
  * @see drupal_find_theme_functions()
  */
 function _bootstrap_process_theme_registry_suggestions(&$registry, $themes) {

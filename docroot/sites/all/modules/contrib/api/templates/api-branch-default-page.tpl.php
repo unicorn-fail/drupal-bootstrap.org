@@ -17,44 +17,44 @@
  */
 ?>
 <?php if (!empty($branch)) {
-  $counts = api_listing_counts($branch);
-  if ($counts['groups'] > 0) {
+  $types = api_listing_types($branch);
+  if ($types['groups']) {
 ?>
   <h3><?php print l(t('Topics'), 'api/' . $branch->project . '/groups/' . $branch->branch_name); ?></h3>
   <?php $out = api_page_listing($branch, 'group', FALSE); print drupal_render($out); ?>
 <?php
   }
-  if ($counts['files'] > 0) {
+  if ($types['files']) {
 ?>
   <h3><?php print l(t('Files'), 'api/' . $branch->project . '/files/' . $branch->branch_name); ?></h3>
 <?php
   }
-  if ($counts['globals'] > 0) {
+  if ($types['globals']) {
 ?>
   <h3><?php print l(t('Globals'), 'api/' . $branch->project . '/globals/' . $branch->branch_name); ?></h3>
 <?php
   }
-  if ($counts['constants'] > 0) {
+  if ($types['constants']) {
 ?>
   <h3><?php print l(t('Constants'), 'api/' . $branch->project . '/constants/' . $branch->branch_name); ?></h3>
 <?php
   }
-  if ($counts['functions'] > 0) {
+  if ($types['functions']) {
 ?>
   <h3><?php print l(t('Functions'), 'api/' . $branch->project . '/functions/' . $branch->branch_name); ?></h3>
 <?php
   }
-  if ($counts['classes'] > 0) {
+  if ($types['classes']) {
 ?>
   <h3><?php print l(t('Classes and Interfaces'), 'api/' . $branch->project . '/classes/' . $branch->branch_name); ?></h3>
 <?php
   }
-  if ($counts['namespaces'] > 0) {
+  if ($types['namespaces']) {
 ?>
   <h3><?php print l(t('Namespaces'), 'api/' . $branch->project . '/namespaces/' . $branch->branch_name); ?></h3>
 <?php
   }
-  if ($counts['deprecated'] > 0) {
+  if ($types['deprecated']) {
 ?>
   <h3><?php print l(t('Deprecated'), 'api/' . $branch->project . '/deprecated/' . $branch->branch_name); ?></h3>
 <?php

@@ -138,7 +138,7 @@ function api_page_admin_form($form, &$form_state) {
     '#type' => 'textfield',
     '#default_value' => variable_get('api_default_project', ''),
     '#title' => t('Default project'),
-    '#autocomplete_path' => 'api/project/autocomplete',
+    '#autocomplete_path' => 'api-project-autocomplete',
     '#description' => t('Name of the default project to display if none is given in a URL. This may be overridden by the API module if a corresponding branch does not exist.'),
   );
 
@@ -346,7 +346,7 @@ function api_branch_edit_form($form, $form_state, $branch_id = NULL) {
     '#type' => 'textfield',
     '#default_value' => $branch->project,
     '#description' => t('The identifier of the project this branch is part of.'),
-    '#autocomplete_path' => 'api/project/autocomplete',
+    '#autocomplete_path' => 'api-project-autocomplete',
     '#required' => TRUE,
   );
 

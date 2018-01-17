@@ -183,7 +183,7 @@ class ApiURLPatternsTest extends ApiTestCase {
         'url' => 'api/' . $project_name . '/subdirectory!classes-subdir.php/interface/SampleInSubDirInterface/' . $branch_name,
         'aliases' => array('api/' . $project_name . '/subdirectory--classes-subdir.php/interface/SampleInSubDirInterface/' . $branch_name),
         'text' => array('SampleInSubDirInterface', 'Sample interface in a subdirectory', 'Implements this API'),
-        'links' => array('Sample2InSubDir', 'SampleInSubDirInterface::foo2', 'classes-subdir.php', 'Class Samples'),
+        'links' => array('SampleInSubDirInterface::foo2', 'classes-subdir.php', 'Class Samples'),
       ),
       array(
         'url' => 'api/' . $project_name . '/subdirectory!classes-subdir.php/property/SampleInSubDir::protected_property_in_sub_dir/' . $branch_name,

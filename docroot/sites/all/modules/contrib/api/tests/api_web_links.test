@@ -132,6 +132,11 @@ class ApiWebLinksTestCase extends ApiWebPagesBaseTest {
         'url' => 'classes.php/constant/Sample',
       ),
       array(
+        'page' => 'Sample::foo',
+        'text' => 'SubSample',
+        'url' => 'classes.php/class/SubSample',
+      ),
+      array(
         'page' => 'Sample::baz',
         'text' => 'foo',
         'url' => 'classes.php/function/Sample',

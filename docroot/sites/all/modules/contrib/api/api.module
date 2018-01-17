@@ -67,12 +67,12 @@ define('API_RE_TAG_START', '(?<!\\\)@');
 /**
  * Regular expression for word boundary start for API linking.
  */
-define('API_RE_WORD_BOUNDARY_START', '(?<=\s|^|\(|@|\>)');
+define('API_RE_WORD_BOUNDARY_START', '(?<=^|[\s\(@\>|])');
 
 /**
  * Regular expression for word boundary end for API linking.
  */
-define('API_RE_WORD_BOUNDARY_END', '(?=$|[\s.,:;?!)\<\[])');
+define('API_RE_WORD_BOUNDARY_END', '(?=$|[\s.,:;?!)\<\[\|])');
 
 /**
  * File path separator.
@@ -383,7 +383,7 @@ function api_menu() {
   }
 
   // Projects autocomplete callback. This is always available.
-  $items['api/project/autocomplete'] = array(
+  $items['api-project-autocomplete'] = array(
     'page callback' => 'api_project_autocomplete',
     'access arguments' => array('access API reference'),
     'type' => MENU_CALLBACK,
@@ -654,6 +654,15 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
+  $items['api/%api_project/%/class/references/%api_item'] = array(
+    'title' => 'Class references',
+    'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
+    'page callback' => 'api_page_function_calls',
+    'page arguments' => array(5, 'references'),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
   $items['api/%api_project/%/class/annotations/%api_item'] = array(
     'title' => 'Class annotations',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
@@ -719,6 +728,15 @@ function api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
   );
+  $items['api/%api_project/%/interface/references/%api_item'] = array(
+    'title' => 'Class references',
+    'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
+    'page callback' => 'api_page_function_calls',
+    'page arguments' => array(5, 'references'),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
   $items['api/%api_project/%/interface/services/%api_item'] = array(
     'title' => 'Class services',
     'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
@@ -735,6 +753,24 @@ function api_menu() {
     'load arguments' => array(1, 5, 2, 3), // project, branch, filename, type
     'page callback' => 'api_page_class',
     'page arguments' => array(4),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/%/trait/uses/%api_item'] = array(
+    'title' => 'Class uses',
+    'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
+    'page callback' => 'api_page_function_calls',
+    'page arguments' => array(5, 'uses'),
+    'access arguments' => array('access API reference'),
+    'type' => MENU_CALLBACK,
+    'file' => 'api.pages.inc',
+  );
+  $items['api/%api_project/%/trait/references/%api_item'] = array(
+    'title' => 'Class references',
+    'load arguments' => array(1, 6, 2, 3), // project, branch, filename, type
+    'page callback' => 'api_page_function_calls',
+    'page arguments' => array(5, 'references'),
     'access arguments' => array('access API reference'),
     'type' => MENU_CALLBACK,
     'file' => 'api.pages.inc',
@@ -1051,7 +1087,7 @@ function api_menu() {
   // Legacy search.
   $items['api/search'] = array(
     'page callback' => 'drupal_goto',
-    'page arguments' => array('api/' . $default_branch->project . '/' . $default_branch->branch_name . '/search', array(), '302'),
+    'page arguments' => array('api/' . $default_branch->project . '/' . $default_branch->branch_name . '/search', array(), '301'),
     'access arguments' => array('access API reference'),
     'type' => MENU_CALLBACK,
   );
@@ -1067,7 +1103,7 @@ function api_menu() {
   $items['api/function/%api_legacy_1_2_object'] = array(
     'load arguments' => array('function', 3),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -1075,7 +1111,7 @@ function api_menu() {
   $items['api/constant/%api_legacy_1_2_object'] = array(
     'load arguments' => array('constant', 3),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -1083,7 +1119,7 @@ function api_menu() {
   $items['api/global/%api_legacy_1_2_object'] = array(
     'load arguments' => array('global', 3),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -1091,7 +1127,7 @@ function api_menu() {
   $items['api/group/%api_legacy_1_2_object'] = array(
     'load arguments' => array('group', 3),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -1100,31 +1136,31 @@ function api_menu() {
   // Legacy listing pages.
   $items['api/functions'] = array(
     'page callback' => 'drupal_goto',
-    'page arguments' => array('api/' . $default_branch->project . '/functions', array(), '302'),
+    'page arguments' => array('api/' . $default_branch->project . '/functions', array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['api/files'] = array(
     'page callback' => 'drupal_goto',
-    'page arguments' => array('api/' . $default_branch->project . '/files', array(), '302'),
+    'page arguments' => array('api/' . $default_branch->project . '/files', array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['api/constants'] = array(
     'page callback' => 'drupal_goto',
-    'page arguments' => array('api/' . $default_branch->project . '/constants', array(), '302'),
+    'page arguments' => array('api/' . $default_branch->project . '/constants', array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['api/globals'] = array(
     'page callback' => 'drupal_goto',
-    'page arguments' => array('api/' . $default_branch->project . '/globals', array(), '302'),
+    'page arguments' => array('api/' . $default_branch->project . '/globals', array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['api/groups'] = array(
     'page callback' => 'drupal_goto',
-    'page arguments' => array('api/' . $default_branch->project . '/groups', array(), '302'),
+    'page arguments' => array('api/' . $default_branch->project . '/groups', array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -1133,35 +1169,35 @@ function api_menu() {
   $items['api/functions/%api_legacy_1_2_listing'] = array(
     'load arguments' => array('functions'),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['api/files/%api_legacy_1_2_listing'] = array(
     'load arguments' => array('files'),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['api/constants/%api_legacy_1_2_listing'] = array(
     'load arguments' => array('constants'),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['api/globals/%api_legacy_1_2_listing'] = array(
     'load arguments' => array('globals'),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['api/groups/%api_legacy_1_2_listing'] = array(
     'load arguments' => array('groups'),
     'page callback' => 'drupal_goto',
-    'page arguments' => array(2, array(), '302'),
+    'page arguments' => array(2, array(), '301'),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -1840,35 +1876,35 @@ function api_block_view($delta) {
 
         $links = array();
         $links[] = l($branch->title, 'api/' . $branch->project . $suffix);
-        $counts = api_listing_counts($branch);
-        if ($counts['groups'] > 0) {
+        $types = api_listing_types($branch);
+        if ($types['groups']) {
           $links[] = l(t('Topics'), 'api/' . $branch->project . '/groups' . $suffix);
         }
-        if ($counts['classes'] > 0) {
+        if ($types['classes']) {
           $links[] = l(t('Classes'), 'api/' . $branch->project . '/classes' . $suffix);
         }
-        if ($counts['functions'] > 0) {
+        if ($types['functions']) {
           $links[] = l(t('Functions'), 'api/' . $branch->project . '/functions' . $suffix);
         }
-        if ($counts['files'] > 0) {
+        if ($types['files']) {
           $links[] = l(t('Files'), 'api/' . $branch->project . '/files' . $suffix);
         }
-        if ($counts['namespaces'] > 0) {
+        if ($types['namespaces']) {
           $links[] = l(t('Namespaces'), 'api/' . $branch->project . '/namespaces' . $suffix);
         }
-        if ($counts['services'] > 0) {
+        if ($types['services']) {
           $links[] = l(t('Services'), 'api/' . $branch->project . '/services' . $suffix);
         }
-        if ($counts['elements'] > 0) {
+        if ($types['elements']) {
           $links[] = l(t('Elements'), 'api/' . $branch->project . '/elements' . $suffix);
         }
-        if ($counts['constants'] > 0) {
+        if ($types['constants']) {
           $links[] = l(t('Constants'), 'api/' . $branch->project . '/constants' . $suffix);
         }
-        if ($counts['globals'] > 0) {
+        if ($types['globals']) {
           $links[] = l(t('Globals'), 'api/' . $branch->project . '/globals' . $suffix);
         }
-        if ($counts['deprecated'] > 0) {
+        if ($types['deprecated']) {
           $links[] = l(t('Deprecated'), 'api/' . $branch->project . '/deprecated' . $suffix);
         }
 
@@ -1891,6 +1927,8 @@ function api_block_view($delta) {
  *   Associative array where the keys are the type of listing ('functions',
  *   'classes', etc.) and the values are the count of how many there are in
  *   that listing for the given branch.
+ *
+ * @deprecated
  */
 function api_listing_counts($branch) {
   static $cached_counts = array();
@@ -1917,8 +1955,7 @@ function api_listing_counts($branch) {
   // These queries mirror what is done in the views used by api_page_listing().
   $query = db_select('api_documentation', 'ad')
     ->condition('branch_id', $branch->branch_id)
-    ->condition('object_type', 'group')
-    ->groupBy('branch_id');
+    ->condition('object_type', 'group');
   $query->addExpression('COUNT(*)', 'num');
   $return['groups'] = $query
     ->execute()
@@ -1936,8 +1973,7 @@ function api_listing_counts($branch) {
   $query = db_select('api_documentation', 'ad')
     ->condition('branch_id', $branch->branch_id)
     ->condition('object_type', array('class', 'interface', 'trait'))
-    ->condition('class_did', 0)
-    ->groupBy('branch_id');
+    ->condition('class_did', 0);
   $query->addExpression('COUNT(*)', 'num');
   $return['classes'] = $query
     ->execute()
@@ -1953,8 +1989,7 @@ function api_listing_counts($branch) {
 
   $query = db_select('api_documentation', 'ad')
     ->condition('branch_id', $branch->branch_id)
-    ->condition('deprecated', '', '<>')
-    ->groupBy('branch_id');
+    ->condition('deprecated', '', '<>');
   $query->addExpression('COUNT(*)', 'num');
   $return['deprecated'] = $query
     ->execute()
@@ -1964,8 +1999,7 @@ function api_listing_counts($branch) {
     $query = db_select('api_documentation', 'ad')
       ->condition('branch_id', $branch->branch_id)
       ->condition('object_type', $type)
-      ->condition('class_did', 0)
-      ->groupBy('branch_id');
+      ->condition('class_did', 0);
     $query->addExpression('COUNT(*)', 'num');
     $return[$type . 's'] = $query
       ->execute()
@@ -1974,6 +2008,54 @@ function api_listing_counts($branch) {
 
   $cached_counts[$key] = $return;
   return $return;
+}
+
+/**
+ * Get item types used for a branch.
+ *
+ * @param $branch
+ *   Object representing the branch.
+ *
+ * @return
+ *   Associative array where the keys are the type of listing ('functions',
+ *   'classes', etc.) and the values are TRUE if there is an item of that type
+ *   for the given branch.
+ */
+function api_listing_types($branch) {
+  static $cache = [];
+
+  // Check the cache.
+  if (isset($cache[$branch->branch_id])) {
+    return $cache[$branch->branch_id];
+  }
+
+  // Make the conditions for each type of listing.
+  $type_conditions = [
+    'groups' => "object_type = 'group'",
+    'classes' => "object_type IN ('class', 'interface', 'trait') AND class_did = 0",
+    'functions' => "object_type = 'function'",
+    'constants' => "object_type = 'constant'",
+    'globals' => "object_type = 'global'",
+    'files' => "object_type = 'file'",
+    'namespaces' => "namespace <> ''",
+    'deprecated' => "deprecated <> ''",
+    'services' => "object_type = 'service'",
+    'elements' => "object_type = 'element'"
+  ];
+
+  // These queries mirror what is done in the views used by api_page_listing().
+  $args = [':branch_id' => $branch->branch_id];
+  foreach ($type_conditions as $type => $condition) {
+    $sql = "
+      SELECT 1 FROM {api_documentation}
+      WHERE branch_id = :branch_id
+      AND $condition
+      ORDER BY branch_id
+    ";
+    $cache[$branch->branch_id][$type] = (bool) db_query_range($sql, 1, 1, $args)->fetchField();
+  }
+
+  return $cache[$branch->branch_id];
 }
 
 /**
@@ -2911,9 +2993,9 @@ function api_get_branch_by_name($project, $branch_name = NULL) {
         (empty($branch_name) && $branch->core_compatibility == $compatibility && $branch->preferred)) {
         return $branch;
       }
-      if (!isset($fallback_branch)) {
-        $fallback_branch = $branch;
-      }
+
+      // Overwrite each time to get the most recent branch as a fallback.
+      $fallback_branch = $branch;
     }
   }
 

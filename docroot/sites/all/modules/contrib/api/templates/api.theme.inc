@@ -152,6 +152,9 @@ function theme_api_function_reference_link($variables) {
   elseif ($function->object_type == 'interface') {
     $link_path = 'api/' . $branch->project . '/' . $processed_file_name . '/interface/' . $type . '/' . $function->object_name . '/' . $branch->branch_name;
   }
+  elseif ($function->object_type == 'trait') {
+    $link_path = 'api/' . $branch->project . '/' . $processed_file_name . '/trait/' . $type . '/' . $function->object_name . '/' . $branch->branch_name;
+  }
   elseif ($function->object_type == 'service') {
     $link_path = 'api/' . $branch->project . '/' . $processed_file_name . '/service/' . $type . '/' . $function->object_name . '/' . $branch->branch_name;
   }
@@ -169,9 +172,7 @@ function theme_api_function_reference_link($variables) {
  * Preprocesses variables for api-views-view-dl-list.tpl.php.
  */
 function api_preprocess_views_view_dl_list(&$variables) {
-  module_load_include('views', 'theme/theme', 'inc');
-
-  $handler  = $variables['view']->style_plugin;
+  $handler = $variables['view']->style_plugin;
 
   $class = explode(' ', $handler->options['class']);
   $class = array_map('views_clean_css_identifier', $class);

@@ -527,6 +527,7 @@ class ApiComplexItemPagesTestCase extends ApiWebPagesBaseTest {
     $this->assertText('* Only implemented in children.', 'Source code appears on class page');
     $this->assertText('class Sample', 'H1 title text is there');
     $this->assertText('Deprecated', 'Deprecated is shown');
+    $this->assertLink('SubSample::foo', 0, 'Link to inherited member is made');
 
     // Plugin annotation section.
     $this->assertText(t('Plugin annotation'), 'Plugin annotation header is there');

@@ -16,7 +16,7 @@ class api_views_handler_filter_project_name extends views_handler_filter_string 
       '#type' => 'textfield',
       '#title' => t('Project'),
       '#default_value' => $default_value,
-      '#autocomplete_path' => 'api/project/autocomplete',
+      '#autocomplete_path' => 'api-project-autocomplete',
     );
   }
 }

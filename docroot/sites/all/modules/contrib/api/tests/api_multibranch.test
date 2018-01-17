@@ -159,17 +159,20 @@ class ApiMultipleBranchesTest extends ApiWebPagesBaseTest {
    * Tests that the apis path works.
    */
   function _testApiS() {
-    // This should go to the sample_function in the first project.
+    // Search for something that is in both projects.
+    // This should go to the sample_function in the later project.
     $this->drupalGet('apis/sample_function');
-    $this->assertURLContains('api/' . $this->branch_info['project'] . '/sample.php/function/sample_function', 'First sample_function is found by apis');
+    $this->assertURLContains('api/' . $this->branch_info_2['project'] . '/sample2.php/function/sample_function', 'First sample_function is found by apis');
 
-    // This should go to a search for sample in the first project.
+    // Search for something that is a partial match.
+    // This should go to a search for sample in the later project.
     $this->drupalGet('apis/sample');
-    $this->assertURLContains('api/' . $this->branch_info['project'] . '/' . $this->branch_info['branch_name'] . '/search/sample', 'Partial-match search works in apis');
+    $this->assertURLContains('api/' . $this->branch_info_2['project'] . '/' . $this->branch_info_2['branch_name'] . '/search/sample', 'Partial-match search works in apis');
 
-    // This should go to the second_sample_function in the second project.
-    $this->drupalGet('apis/second_sample_function');
-    $this->assertURLContains('api/' . $this->branch_info_2['project'] . '/sample2.php/function/second_sample_function', 'second_sample_function is found by apis');
+    // Search for something that is only in the earlier project.
+    // This should go to SAMPLE_CONSTANT in the earlier project.
+    $this->drupalGet('apis/SAMPLE_CONSTANT');
+    $this->assertURLContains('api/' . $this->branch_info['project'] . '/sample.php/constant/SAMPLE_CONSTANT', 'SAMPLE_CONSTANT is found by apis');
 
     // This should not find anything.
     $this->drupalGet('apis/pizza');
@@ -375,17 +378,20 @@ class ApiMultipleProjectsTest extends ApiWebPagesBaseTest {
    * Tests that the apis path works.
    */
   function _testApiS() {
-    // This should go to the sample_function in the first project.
+    // Search for something that is in both projects.
+    // This should go to the sample_function in the later project.
     $this->drupalGet('apis/sample_function');
-    $this->assertURLContains('api/' . $this->branch_info['project'] . '/sample.php/function/sample_function', 'First sample_function is found by apis');
+    $this->assertURLContains('api/' . $this->branch_info_2['project'] . '/sample2.php/function/sample_function', 'First sample_function is found by apis');
 
-    // This should go to a search for sample in the first project.
+    // Search for something that is a partial match.
+    // This should go to a search for sample in the later project.
     $this->drupalGet('apis/sample');
-    $this->assertURLContains('api/' . $this->branch_info['project'] . '/' . $this->branch_info['branch_name'] . '/search/sample', 'Partial-match search works in apis');
+    $this->assertURLContains('api/' . $this->branch_info_2['project'] . '/' . $this->branch_info_2['branch_name'] . '/search/sample', 'Partial-match search works in apis');
 
-    // This should go to the second_sample_function in the second project.
-    $this->drupalGet('apis/second_sample_function');
-    $this->assertURLContains('api/' . $this->branch_info_2['project'] . '/sample2.php/function/second_sample_function', 'second_sample_function is found by apis');
+    // Search for something that is only in the earlier project.
+    // This should go to SAMPLE_CONSTANT in the earlier project.
+    $this->drupalGet('apis/SAMPLE_CONSTANT');
+    $this->assertURLContains('api/' . $this->branch_info['project'] . '/sample.php/constant/SAMPLE_CONSTANT', 'SAMPLE_CONSTANT is found by apis');
 
     // This should go to the drupal_alter in the core project.
     $this->drupalGet('apis/module_invoke_all');

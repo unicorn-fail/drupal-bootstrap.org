@@ -7,10 +7,10 @@
 
 
 /**
- * Turns function names into links in code.
+ * Turns function, class, and other names into links in code.
  *
  * @param string $code
- *   PHP code to scan for function names.
+ *   PHP code to scan for things to make into links.
  * @param object $branch
  *   Branch to make the links in.
  * @param int $file_did
@@ -22,7 +22,7 @@
  *   (optional) If set explicitly to FALSE, omit the Drupal-specific link steps.
  *
  * @return string
- *   Code with function names formatted as links.
+ *   Code with links.
  *
  * @see api_link_documentation
  */
@@ -38,10 +38,10 @@ function api_link_code($code, $branch, $file_did = NULL, $class_did = NULL, $is_
 }
 
 /**
- * Turns function names into links in documentation.
+ * Turns function, class, and other names into links in documentation.
  *
  * @param string $documentation
- *   Documentation to scan for function names.
+ *   Documentation to scan for things to turn into links.
  * @param object $branch
  *   Branch to make the links in.
  * @param int $file_did
@@ -58,7 +58,7 @@ function api_link_code($code, $branch, $file_did = NULL, $class_did = NULL, $is_
  *   (optional) If set explicitly to FALSE, omit the Drupal-specific link steps.
  *
  * @return string
- *   Documentation with function names formatted as links.
+ *   Documentation with links.
  *
  * @see api_link_code
  */
@@ -563,6 +563,12 @@ function api_link_name($name, $branch, $prepend = '', $append = '', $file_did = 
     if ($link) {
       return $prepend . $link . $append;
     }
+
+    // Also try finding a link to a class member.
+    $link = _api_make_match_member_link($namespaced_name, $text, $branch);
+    if ($link) {
+      return $prepend . $link . $append;
+    }
   }
 
   // If we get here, there wasn't a match. Try PHP functions.
@@ -578,6 +584,12 @@ function api_link_name($name, $branch, $prepend = '', $append = '', $file_did = 
 
   if ($core_branch && $core_branch->branch_id != $branch->branch_id) {
     $link = _api_make_match_link($name, $namespaced_name, $text, $type, $is_link, $core_branch);
+    if ($link) {
+      return $prepend . $link . $append;
+    }
+
+    // Also try finding a link to a class member.
+    $link = _api_make_match_member_link($namespaced_name, $text, $core_branch);
     if ($link) {
       return $prepend . $link . $append;
     }
@@ -607,6 +619,12 @@ function api_link_name($name, $branch, $prepend = '', $append = '', $file_did = 
   // only if this was not a core branch.
   if (!$core_branch || $core_branch->branch_id != $branch->branch_id) {
     $link = _api_make_match_link($name, $namespaced_name, $text, $type, $is_link, NULL, $core_compatibility);
+    if ($link) {
+      return $prepend . $link . $append;
+    }
+
+    // Also try finding a link to a class member.
+    $link = _api_make_match_member_link($namespaced_name, $text, NULL, $core_compatibility);
     if ($link) {
       return $prepend . $link . $append;
     }
@@ -937,6 +955,99 @@ function _api_make_match_link($name, $namespaced_name, $text, $type, $try_link =
   }
   $url = $url . $search_name;
 
+  return l($text, $url, $options);
+}
+
+/**
+ * Finds matches for a member object name in a branch and makes a link.
+ *
+ * Helper function for api_link_name().
+ *
+ * @param $namespaced_name
+ *   Fully namespaced name to look for. It must contain :: and this will be
+ *   used to separate it into the class name and member name.
+ * @param $text
+ *   Text to put in the link.
+ * @param $branch
+ *   Object representing the branch to search. If NULL, use core compatibility
+ *   instead.
+ * @param $core_compatibility
+ *   If $branch is NULL, search all branches with this core compatibility.
+ *
+ * @return
+ *   Link to a single matching object if one is found, or FALSE if there is not
+ *   one.
+ */
+function _api_make_match_member_link($namespaced_name, $text, $branch = NULL, $core_compatibility = '') {
+
+  // Figure out the class name and member name.
+  $parts = explode('::', $namespaced_name);
+  if (count($parts) != 2) {
+    return FALSE;
+  }
+  $class_name = $parts[0];
+  $member_name = $parts[1];
+
+  // Make a query to find the class.
+  $query = db_select('api_documentation', 'ad_class');
+  $query->innerJoin('api_branch', 'b', 'ad_class.branch_id = b.branch_id');
+  $query->fields('b', array('branch_name', 'preferred', 'project'));
+  if ($branch) {
+    $query->condition('ad_class.branch_id', $branch->branch_id);
+  }
+  else {
+    $query->condition('b.core_compatibility', $core_compatibility);
+  }
+  $query->condition('ad_class.namespaced_name', $class_name);
+
+  // Join to find the members.
+  $query->innerJoin('api_members', 'am', 'ad_class.did = am.class_did');
+
+  // Join to find info about the member name.
+  $query->innerJoin('api_documentation', 'ad_member', 'am.did = ad_member.did');
+
+  $condition = db_or();
+  $condition->condition('am.member_alias', $member_name);
+  $condition->condition('ad_member.member_name', $member_name);
+  $query->condition($condition);
+
+  $query->addField('am', 'member_alias', 'member1');
+  $query->addField('ad_member', 'member_name', 'member2');
+  $query->addField('ad_class', 'namespaced_name', 'classname');
+  $query->fields('ad_member', array('did', 'branch_id', 'object_name', 'title', 'object_type', 'summary', 'file_name'));
+
+  // Execute the query. Check for one case-sensitive result (SQL is usually
+  // not case sensitive).
+  $results = $query->execute();
+  if (count($results) != 1) {
+    return;
+  }
+
+  $found = NULL;
+  foreach ($results as $object) {
+    // MySQL is not case-sensitive, so check the match for exact string.
+    if ($object->classname == $class_name && ($object->member1 == $member_name || $object->member2 == $member_name)) {
+      if ($found) {
+        // This is a second match, so forget it.
+        return FALSE;
+      }
+      else {
+        $found = $object;
+      }
+    }
+  }
+  if (!$found) {
+    return FALSE;
+  }
+
+  $options = array(
+    'attributes' => array(
+      'title' => api_entity_decode($found->summary),
+      'class' => array('local'),
+    ),
+  );
+
+  $url = api_url($found);
   return l($text, $url, $options);
 }
 

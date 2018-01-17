@@ -34,7 +34,7 @@ function api_search_redirect() {
   $query->innerJoin('api_branch', 'b', 'ad.branch_id = b.branch_id');
   $results = $query
     ->condition('ad.title', $tail)
-    ->orderBy('b.weight')
+    ->orderBy('b.weight', 'DESC')
     ->range(0,1)
     ->fields('b', array('project', 'branch_name'))
     ->execute();
@@ -49,7 +49,7 @@ function api_search_redirect() {
   $query->innerJoin('api_branch', 'b', 'ad.branch_id = b.branch_id');
   $results = $query
     ->condition('ad.title', '%' . $tail . '%', 'LIKE')
-    ->orderBy('b.weight')
+    ->orderBy('b.weight', 'DESC')
     ->range(0,1)
     ->fields('b', array('project', 'branch_name'))
     ->execute();
@@ -342,7 +342,7 @@ function api_page_projects() {
 function api_project_form($form, $form_state) {
   $form['project'] = array(
     '#type' => 'textfield',
-    '#autocomplete_path' => 'api/project/autocomplete',
+    '#autocomplete_path' => 'api-project-autocomplete',
     '#title' => t('Project short name'),
     '#default_value' => !empty($form_state['values']['project']) ? $form_state['values']['project'] : '',
   );
@@ -1335,7 +1335,7 @@ function api_build_references($types, $object, $branch) {
  * @param $function
  *   Documentation object representing the function to display.
  * @param $type
- *   Type of page to generate. See api_find_references for list.
+ *   Type of page to generate. See api_find_references() for list.
  *
  * @return
  *   HTML output for the page.
@@ -1526,13 +1526,15 @@ function api_page_class($class) {
 
   $objects = drupal_render($objects);
 
-  $reference_types = array('uses', 'references', 'services');
+  $reference_types = array('uses', 'references');
   if ($class->object_type == 'class') {
     $reference_types[] = 'annotations';
     $reference_types[] = 'element_invokes';
+    $reference_types[] = 'services';
   }
   elseif ($class->object_type == 'interface') {
     $reference_types[] = 'implements';
+    $reference_types[] = 'services';
   }
 
   $links = api_build_references($reference_types, $class, $branch);

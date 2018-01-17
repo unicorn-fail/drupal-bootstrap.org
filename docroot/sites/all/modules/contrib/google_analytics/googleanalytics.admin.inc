@@ -18,10 +18,17 @@ function googleanalytics_admin_settings_form($form_state) {
     '#title' => t('Web Property ID'),
     '#type' => 'textfield',
     '#default_value' => variable_get('googleanalytics_account', 'UA-'),
-    '#size' => 15,
+    '#size' => 20,
     '#maxlength' => 20,
     '#required' => TRUE,
     '#description' => t('This ID is unique to each site you want to track separately, and is in the form of UA-xxxxxxx-yy. To get a Web Property ID, <a href="@analytics">register your site with Google Analytics</a>, or if you already have registered your site, go to your Google Analytics Settings page to see the ID next to every site profile. <a href="@webpropertyid">Find more information in the documentation</a>.', array('@analytics' => 'http://www.google.com/analytics/', '@webpropertyid' => url('https://developers.google.com/analytics/resources/concepts/gaConceptsAccounts', array('fragment' => 'webProperty')))),
+  );
+
+  $form['account']['googleanalytics_premium'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Premium account'),
+    '#description' => t('If you are a Google Analytics Premium customer, you can use up to 200 instead of 20 custom dimensions and metrics.'),
+    '#default_value' => variable_get('googleanalytics_premium', FALSE),
   );
 
   // Visibility settings.
@@ -258,7 +265,7 @@ function googleanalytics_admin_settings_form($form_state) {
     '#type' => 'checkboxes',
     '#title' => t('Track messages of type'),
     '#default_value' => variable_get('googleanalytics_trackmessages', array()),
-    '#description' => t('This will track the selected message types shown to users. Tracking of form validation errors may help you identifying usability issues in your site. For each visit (user session), a maximum of approximately 500 combined GATC requests (both events and page views) can be tracked. Every message is tracked as one individual event. Note that - as the number of events in a session approaches the limit - additional events might not be tracked. Messages from excluded pages cannot tracked.'),
+    '#description' => t('This will track the selected message types shown to users. Tracking of form validation errors may help you identifying usability issues in your site. For each visit (user session), a maximum of approximately 500 combined GATC requests (both events and page views) can be tracked. Every message is tracked as one individual event. Note that - as the number of events in a session approaches the limit - additional events might not be tracked. Messages from excluded pages cannot be tracked.'),
     '#options' => array(
       'status' => t('Status message'),
       'warning' => t('Warning message'),
@@ -326,8 +333,10 @@ function googleanalytics_admin_settings_form($form_state) {
 
   $googleanalytics_custom_dimension = variable_get('googleanalytics_custom_dimension', array());
 
-  // Google Analytics supports up to 20 custom dimensions.
-  for ($i = 1; $i <= 20; $i++) {
+  // Standard Google Analytics accounts support up to 20 custom dimensions,
+  // premium accounts support up to 200 custom dimensions.
+  $limit = (variable_get('googleanalytics_premium', FALSE)) ? 200 : 20;
+  for ($i = 1; $i <= $limit; $i++) {
     $form['googleanalytics_custom_dimension']['indexes'][$i]['index'] = array(
       '#default_value' => $i,
       '#description' => t('Index number'),
@@ -377,8 +386,9 @@ function googleanalytics_admin_settings_form($form_state) {
 
   $googleanalytics_custom_metric = variable_get('googleanalytics_custom_metric', array());
 
-  // Google Analytics supports up to 20 custom metrics.
-  for ($i = 1; $i <= 20; $i++) {
+  // Standard Google Analytics accounts support up to 20 custom metrics,
+  // premium accounts support up to 200 custom metrics.
+  for ($i = 1; $i <= $limit; $i++) {
     $form['googleanalytics_custom_metric']['indexes'][$i]['index'] = array(
       '#default_value' => $i,
       '#description' => t('Index number'),
@@ -440,6 +450,8 @@ function googleanalytics_admin_settings_form($form_state) {
     );
   }
 
+  $user_access_add_js_snippets = !user_access('add JS snippets for google analytics');
+  $user_access_add_js_snippets_permission_warning = $user_access_add_js_snippets ? ' <em>' . t('This field has been disabled because you do not have sufficient permissions to edit it.') . '</em>' : '';
   $form['advanced']['codesnippet'] = array(
     '#type' => 'fieldset',
     '#title' => t('Custom JavaScript code'),
@@ -459,15 +471,17 @@ function googleanalytics_admin_settings_form($form_state) {
     '#type' => 'textarea',
     '#title' => t('Code snippet (before)'),
     '#default_value' => variable_get('googleanalytics_codesnippet_before', ''),
+    '#disabled' => $user_access_add_js_snippets,
     '#rows' => 5,
-    '#description' => t('Code in this textarea will be added <strong>before</strong> <code>ga("send", "pageview");</code>.'),
+    '#description' => t('Code in this textarea will be added <strong>before</strong> <code>ga("send", "pageview");</code>.') . $user_access_add_js_snippets_permission_warning,
   );
   $form['advanced']['codesnippet']['googleanalytics_codesnippet_after'] = array(
     '#type' => 'textarea',
     '#title' => t('Code snippet (after)'),
     '#default_value' => variable_get('googleanalytics_codesnippet_after', ''),
+    '#disabled' => $user_access_add_js_snippets,
     '#rows' => 5,
-    '#description' => t('Code in this textarea will be added <strong>after</strong> <code>ga("send", "pageview");</code>. This is useful if you\'d like to track a site in two accounts.'),
+    '#description' => t('Code in this textarea will be added <strong>after</strong> <code>ga("send", "pageview");</code>. This is useful if you\'d like to track a site in two accounts.') . $user_access_add_js_snippets_permission_warning,
   );
 
   $form['advanced']['googleanalytics_debug'] = array(
@@ -781,16 +795,18 @@ function _googleanalytics_validate_create_field_name($name) {
   // List of supported field names:
   // https://developers.google.com/analytics/devguides/collection/analyticsjs/field-reference#create
   $create_only_fields = array(
-    'clientId',
-    'userId',
-    'sampleRate',
-    'siteSpeedSampleRate',
-    'alwaysSendReferrer',
     'allowAnchor',
+    'alwaysSendReferrer',
+    'clientId',
     'cookieName',
     'cookieDomain',
     'cookieExpires',
     'legacyCookieDomain',
+    'legacyHistoryImport',
+    'sampleRate',
+    'siteSpeedSampleRate',
+    'storage',
+    'userId',
   );
 
   if ($name == 'name') {

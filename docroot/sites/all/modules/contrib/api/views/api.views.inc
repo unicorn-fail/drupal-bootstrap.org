@@ -80,6 +80,19 @@ function api_views_data() {
       ),
     ),
 
+    'overridden_did' => array(
+      'title' => t('Overriden dummy field'),
+      'relationship' => array(
+        'base' => 'api_overrides',
+        'base field' => 'overrides_did',
+        'field' => 'did',
+        'handler' => 'views_handler_relationship',
+        'label' => t('Overriden by information'),
+        'title' => t('Overridden by information'),
+        'help' => t('Information about whether this class member is overridden by or implemented by a class member'),
+      ),
+    ),
+
     'references_did' => array(
       'title' => t('References dummy field'),
       'relationship' => array(
@@ -89,7 +102,24 @@ function api_views_data() {
         'handler' => 'views_handler_relationship',
         'label' => t('All references this item has'),
         'title' => t('All references this item has'),
-        'help' => t('All references that were found in the code for this item. This will create duplicate records, unless you filter.'),
+        'help' => t('All items that this item references, such as other function calls. This will create duplicate records, unless you filter.'),
+      ),
+    ),
+
+    'references_name' => array(
+      'title' => t('References dummy field for name'),
+      'relationship' => array(
+        'base' => 'api_reference_storage',
+        'base field' => 'object_name',
+        'field' => 'object_name',
+        'handler' => 'views_handler_relationship',
+        'join_handler' => 'api_views_join_extras',
+        'extra' => array(
+          array('field' => 'branch_id = %alias.branch_id', 'prepend_left' => TRUE),
+        ),
+        'label' => t('All references to this item name in this branch'),
+        'title' => t('All references to this item name in this branch'),
+        'help' => t('All references, such as function calls and class extends, that match this item name. This will create duplicate records, unless you filter.'),
       ),
     ),
 
@@ -686,15 +716,18 @@ function api_views_data() {
     ),
 
     'did' => array(
-      'title' => t('Documentation ID of member for overrides'),
-      'help' => t('Numeric ID of the member for overrides'),
+      'title' => t('Documentation ID of overriding member'),
+      'help' => t('Numeric ID of the overriding member'),
       'relationship' => array(
         'base' => 'api_documentation',
         'base field' => 'did',
         'handler' => 'views_handler_relationship',
-        'label' => t('Documentation object of member for overrides'),
-        'title' => t('Documentation object of member for overrides'),
-        'help' => t('Documentation information of the member'),
+        'label' => t('Documentation object of overriding member'),
+        'title' => t('Documentation object of overriding member'),
+        'help' => t('Documentation information of the overriding member'),
+      ),
+      'field' => array(
+        'handler' => 'views_handler_field_numeric',
       ),
       'filter' => array(
         'handler' => 'views_handler_filter_numeric',
@@ -706,7 +739,7 @@ function api_views_data() {
 
     'overrides_did' => array(
       'title' => t('Documentation ID of overridden member'),
-      'help' => t('Numeric ID of the member item being overridden'),
+      'help' => t('Numeric ID of the overridden member item'),
       'relationship' => array(
         'base' => 'api_documentation',
         'base field' => 'did',
@@ -714,6 +747,9 @@ function api_views_data() {
         'label' => t('Documentation object of member being overridden'),
         'title' => t('Documentation object of member being overridden'),
         'help' => t('Documentation information of member being overridden'),
+      ),
+      'field' => array(
+        'handler' => 'views_handler_field_numeric',
       ),
       'filter' => array(
         'handler' => 'views_handler_filter_numeric',
@@ -745,6 +781,9 @@ function api_views_data() {
         'label' => t('Documentation object where reference was found'),
         'title' => t('Documentation object where reference was found'),
         'help' => t('Documentation information of the item where reference was found'),
+      ),
+      'field' => array(
+        'handler' => 'views_handler_field_numeric',
       ),
       'filter' => array(
         'handler' => 'views_handler_filter_numeric',

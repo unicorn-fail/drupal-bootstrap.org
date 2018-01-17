@@ -2473,7 +2473,7 @@ function api_shutdown() {
 
       // If this class's parent is already marked as "changed", then this
       // class needs to be marked as "changed" also.
-      if (in_array($new_id, $classes_changed)) {
+      if (in_array($new_id, $classes_changed) && !in_array($did, $classes_changed)) {
         $classes_changed[] = $did;
       }
 
@@ -2486,31 +2486,37 @@ function api_shutdown() {
     }
     $class_parents[$did] = $parents;
 
-    // See if anything else inherits from this class. If so, we need to check it
-    // too. This could be a class that has already computed this as its
-    // extends_did, or a class in the same core compatibility that extends a
-    // class by this name, but has a blank extends_did because this class hadn't
-    // been parsed yet. We won't worry about the possible edge case of a class
-    // that had found another one previously and this one would now be better.
-    $or = db_or()
-      ->condition('extends_did', $did)
-      ->condition('object_name', $doc_object->namespaced_name);
-    $query = db_select('api_reference_storage', 'ars')
-      ->fields('ars', array('from_did'))
-      ->condition('object_type', array('class', 'interface', 'trait'))
-      ->condition($or);
-    $query->innerJoin('api_branch', 'b', 'b.branch_id = ars.branch_id');
-    $query->condition('b.core_compatibility', $doc_object->core_compatibility);
-    $results = $query->execute()->fetchCol();
+    // If this is one of the "changed" classes, see if anything else inherits
+    // from this class. If so, we need to check it too. This could be a class
+    // that has already computed this as its extends_did, or a class in the
+    // same core compatibility that extends a class by this namespaced name
+    // but maybe didn't know the DID yet. Don't worry about the possible
+    // edge case of a class that had found another one previously and this one
+    // would now be better.
+    if (in_array($did, $classes_changed)) {
+      $or = db_or()
+        ->condition('extends_did', $did)
+        ->condition('object_name', $doc_object->namespaced_name);
+      $query = db_select('api_reference_storage', 'ars')
+        ->fields('ars', array('from_did'))
+        ->condition('object_type', array('class', 'interface', 'trait'))
+        ->condition($or);
+      $query->innerJoin('api_branch', 'b', 'b.branch_id = ars.branch_id');
+      $query->condition('b.core_compatibility', $doc_object->core_compatibility);
+      $results = $query->execute()->fetchCol();
 
-    foreach ($results as $from_did) {
-      if (!is_numeric($from_did)) {
-        continue;
-      }
-      $from_did = (int) $from_did;
-      if (!isset($classes_added[$from_did])) {
-        $classes_todo[] = $from_did;
-        $classes_added[$from_did] = $from_did;
+      foreach ($results as $from_did) {
+        if (!is_numeric($from_did)) {
+          continue;
+        }
+        $from_did = (int) $from_did;
+        if (!isset($classes_added[$from_did])) {
+          $classes_todo[] = $from_did;
+          $classes_added[$from_did] = $from_did;
+          if (!in_array($from_did, $classes_changed)) {
+            $classes_changed[] = $from_did;
+          }
+        }
       }
     }
   }
@@ -2524,64 +2530,59 @@ function api_shutdown() {
     _api_update_class_reference_info($did, $class_parents, $class_members);
   }
 
-  // Recompute all member-self and member-parent references.
-  // @todo Maybe this could be moved to _api_update_class_reference_info()
-  // and we could just update references in the affected classes, instead of
-  // globally?
-  db_delete('api_reference_storage')
-    ->condition('object_type', 'computed-member')
-    ->execute();
+  // Now that all the class members have been updated, calculate
+  // computed-member references for member-parent calls in the references
+  // table. These are cases where ChildClass::foo() calls parent::bar(), and we
+  // need to figure out the full name of the parent member. Do this for
+  // all class methods in $classes_changed.
+  foreach ($classes_changed as $did) {
+    if (isset($class_members[$did]) && count($class_members[$did]['function'])) {
+      $direct_methods = array_values($class_members[$did]['function']);
+      $select = db_select('api_reference_storage', 'r')
+        ->condition('r.object_type', 'member-parent')
+        ->condition('r.from_did', $direct_methods);
+      // This joins to the documentation record of the calling method.
+      $select->innerJoin('api_documentation', 'cd', 'r.from_did = cd.did');
+      // This finds the parent (extends) class record.
+      $select->innerJoin('api_reference_storage', 'e', 'e.from_did = cd.class_did');
+      $select
+        ->condition('e.object_type', 'class')
+        ->condition('e.extends_did', 0, '>');
+      // This finds the members of the parent class.
+      $select->innerJoin('api_members', 'pm', 'pm.class_did = e.extends_did');
+      // We're looking for a method whose name is r.object_name. It is either:
+      // - pm.member_alias (if it came from a trait with an alias)
+      // - pm.member_alias is NULL and it's the member name in the member's
+      //   documentation record.
+      $select->innerJoin('api_documentation', 'dm', 'pm.did = dm.did');
+      $and = db_and()
+        ->where('dm.member_name = r.object_name')
+        ->isNull('pm.member_alias');
+      $and2 = db_and()
+        ->where('pm.member_alias = r.object_name')
+        ->isNotNull('pm.member_alias');
+      $or = db_or()
+        ->condition($and)
+        ->condition($and2);
+      $select->condition($or);
+      $select->condition('dm.object_type', 'function');
 
-  // Figure out the member-self references in reference storage. Basically,
-  // ChildClass::foo() calls $this->bar(). We need to figure out the full name
-  // of $this->bar(), which could be ChildClass::bar() or
-  // SomeParentClass::bar(). The {api_members} table keeps track of this.
-  // Do not allow aliases here.
-  $select = db_select('api_reference_storage', 'r')
-    ->condition('r.object_type', 'member-self');
-  $select->innerJoin('api_documentation', 'd', 'r.from_did = d.did');
-  $select->innerJoin('api_members', 'm', 'd.class_did = m.class_did');
-  $select->innerJoin('api_documentation', 'dm', 'm.did = dm.did AND dm.member_name = r.object_name');
-  $select->condition('dm.object_type', 'function');
-  $select->isNull('m.member_alias');
-  $select->addField('dm', 'namespaced_name', 'object_name');
-  $select->addField('r', 'branch_id', 'branch_id');
-  $select->addField('r', 'from_did', 'from_did');
-  // Note: SelectQuery adds expressions to the query at the end of the field
-  // list.
-  $select->addExpression("'computed-member'", 'object_type');
+      // Now make up the needed fields for the api_reference_storage records,
+      // and insert them into the table.
+      $select->distinct();
+      $select->addField('dm', 'namespaced_name', 'object_name');
+      $select->addField('r', 'branch_id', 'branch_id');
+      $select->addField('r', 'from_did', 'from_did');
+      // Note: SelectQuery adds expressions to the query at the end of the field
+      // list.
+      $select->addExpression("'computed-member'", 'object_type');
 
-  db_insert('api_reference_storage')
-    ->fields(array('object_name', 'branch_id', 'from_did', 'object_type'))
-    ->from($select)
-    ->execute();
-
-  // Do the same for member-parent references, where ChildClass::foo() calls
-  // parent::bar() -- figure out the full name of the parent member.
-  // Do not allow aliases.
-  $select = db_select('api_reference_storage', 'r')
-    ->condition('r.object_type', 'member-parent');
-  $select->innerJoin('api_documentation', 'cd', 'r.from_did = cd.did');
-  $select->innerJoin('api_reference_storage', 'e', 'e.from_did = cd.class_did');
-  $select
-    ->condition('e.object_type', 'class')
-    ->condition('e.extends_did', 0, '>');
-  $select->innerJoin('api_members', 'pm', 'pm.class_did = e.extends_did');
-  $select->isNull('pm.member_alias');
-  $select->innerJoin('api_documentation', 'md', 'md.did = pm.did AND md.member_name = r.object_name');
-  $select->condition('md.object_type', 'function');
-
-  $select->addField('md', 'namespaced_name', 'object_name');
-  $select->addField('r', 'branch_id', 'branch_id');
-  $select->addField('r', 'from_did', 'from_did');
-  // Note: SelectQuery adds expressions to the query at the end of the field
-  // list.
-  $select->addExpression("'computed-member'", 'object_type');
-
-  db_insert('api_reference_storage')
-    ->fields(array('object_name', 'branch_id', 'from_did', 'object_type'))
-    ->from($select)
-    ->execute();
+      db_insert('api_reference_storage')
+        ->fields(array('object_name', 'branch_id', 'from_did', 'object_type'))
+        ->from($select)
+        ->execute();
+    }
+  }
 
   cache_clear_all();
 }
@@ -2714,6 +2715,64 @@ function _api_update_class_reference_info($did, $parent_info, $member_info) {
   if ($has_some) {
     $query->execute();
   }
+
+  // Update the calculated member reference storage for this class, first
+  // deleting any existing computed-member entries. These are for when
+  // you have self::foo() or parent::bar() calls inside a method. We will
+  // delete all computed-member entries, and recalculate the self:: ones here;
+  // the parent:: ones are recalculated in api_shutdown() because we do not
+  // necessarily have the parent class member information in the database
+  // at this point.
+  if (isset($member_info[$did]) && count($member_info[$did]['function'])) {
+    // Delete all previous computed-member entries for calls from direct
+    // methods of this class.
+    $direct_methods = array_values($member_info[$did]['function']);
+    db_delete('api_reference_storage')
+      ->condition('object_type', 'computed-member')
+      ->condition('from_did', $direct_methods)
+      ->execute();
+
+    // Calculate computed-member entries for member-self references. We're
+    // taking an entry that says something like ThisClass::foo() calls
+    // self::bar(), and trying to calculate the fully namespaced name of
+    // self::bar(), which might be ThisClass::bar() or SomeParentClass::bar().
+    $select = db_select('api_reference_storage', 'r')
+      ->condition('r.object_type', 'member-self')
+      ->condition('r.from_did', $direct_methods);
+    // This joins to the documentation record of the calling method.
+    $select->innerJoin('api_documentation', 'd', 'r.from_did = d.did');
+    // This links to the now-updated member list of the class the calling
+    // method is in.
+    $select->innerJoin('api_members', 'm', 'd.class_did = m.class_did');
+    // We're looking for a method whose name is r.object_name. It is either:
+    // - m.member_alias (if it came from a trait with an alias)
+    // - m.member_alias is NULL and it's the member name in the member's
+    //   documentation record.
+    $select->innerJoin('api_documentation', 'dm', 'm.did = dm.did');
+    $and = db_and()
+      ->where('dm.member_name = r.object_name')
+      ->isNull('m.member_alias');
+    $or = db_or()
+      ->condition($and)
+      ->where('m.member_alias = r.object_name');
+    $select->condition($or);
+    $select->condition('dm.object_type', 'function');
+
+    // Now make up the needed fields for the api_reference_storage records,
+    // and insert them into the table.
+    $select->distinct();
+    $select->addField('dm', 'namespaced_name', 'object_name');
+    $select->addField('r', 'branch_id', 'branch_id');
+    $select->addField('r', 'from_did', 'from_did');
+    // Note: SelectQuery adds expressions to the query at the end of the field
+    // list.
+    $select->addExpression("'computed-member'", 'object_type');
+    db_insert('api_reference_storage')
+      ->fields(array('object_name', 'branch_id', 'from_did', 'object_type'))
+      ->from($select)
+      ->execute();
+  }
+
 }
 
 /**

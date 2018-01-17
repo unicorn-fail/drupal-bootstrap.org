@@ -39,11 +39,14 @@ function diff_help($path, $arg) {
     case 'admin/help#diff':
       $output = '<p>' . t('The Diff module replaces the normal <em>Revisions</em> node tab. Diff enhances the listing of revisions with an option to view the differences between any two content revisions. Access to this feature is controlled with the <em>View revisions</em> permission. The feature can be disabled for an entire content type on the content type configuration page. Diff also provides an optional <em>View changes</em> button while editing a node.') . '</p>';
       return $output;
+
     case 'node/%/revisions/%/view':
       // The translated strings should match node_help('node/%/revisions').
       return '<p>' . t('Revisions allow you to track differences between multiple versions of your content, and revert back to older versions.') . '</p>';
+
     case 'node/%/revisions/view/%/%':
       return '<p>' . t('Comparing two revisions:') . '</p>';
+
   }
 }
 
@@ -207,6 +210,18 @@ function diff_node_revision_access($node, $op = 'view') {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function diff_permission() {
+  return array(
+    'diff view changes' => array(
+      'title' => t('Access %view button', array('%view' => t('View changes'))),
+      'description' => t('Controls access to the %view button when editing content.', array('%view' => t('View changes'))),
+    ),
+  );
+}
+
+/**
  * Implements hook_hook_info().
  */
 function diff_hook_info() {
@@ -245,6 +260,28 @@ function diff_entity_info_alter(&$entity_info) {
       );
     }
   }
+}
+
+/**
+ * Returns a list of all the existing revision numbers.
+ *
+ * Clone of node_revision_list() with revision status included. This would be
+ * an additional join in Drupal 8.x to the {node_field_revision} table.
+ *
+ * @param object $node
+ *   The node object.
+ *
+ * @return array
+ *   An associative array keyed by node revision number.
+ */
+function diff_node_revision_list($node) {
+  $revisions = array();
+  $result = db_query('SELECT r.vid, r.title, r.log, r.uid, n.vid AS current_vid, r.status AS status, r.timestamp, u.name FROM {node_revision} r LEFT JOIN {node} n ON n.vid = r.vid INNER JOIN {users} u ON u.uid = r.uid WHERE r.nid = :nid ORDER BY r.vid DESC', array(':nid' => $node->nid));
+  foreach ($result as $revision) {
+    $revisions[$revision->vid] = $revision;
+  }
+
+  return $revisions;
 }
 
 /**
@@ -296,7 +333,7 @@ function diff_block_view($delta) {
     $enabled_types = variable_get('diff_show_diff_inline_node_bundles', array());
     if (!empty($enabled_types[$node->type])) {
       $block = array();
-      $revisions = node_revision_list($node);
+      $revisions = diff_node_revision_list($node);
       if (count($revisions) > 1) {
         $block['subject'] = t('Highlight changes');
         $block['content'] = drupal_get_form('diff_inline_form', $node, $revisions);
@@ -329,7 +366,9 @@ function diff_node_view_alter(&$build) {
 function diff_form_node_form_alter(&$form, $form_state) {
   // Add a 'View changes' button on the node edit form.
   $node = $form['#node'];
-  if (variable_get('diff_show_preview_changes_node_' . $node->type, TRUE) && !empty($node->nid)) {
+  if (variable_get('diff_show_preview_changes_node_' . $node->type, TRUE)
+      && user_access('diff view changes')
+      && !empty($node->nid)) {
     $form['actions']['preview_changes'] = array(
       '#type' => 'submit',
       '#value' => t('View changes'),
@@ -356,6 +395,9 @@ function diff_form_node_type_form_alter(&$form, $form_state) {
       '#title' => t('Show <em>View changes</em> button on node edit form'),
       '#weight' => 10,
       '#default_value' => variable_get('diff_show_preview_changes_node_' . $type->type, TRUE),
+      '#description' => t('You can refine access using the "!perm" permission.', array(
+        '!perm' => t('Access %view button', array('%view' => t('View changes'))),
+      )),
     );
     $form['diff']['diff_enable_revisions_page_node'] = array(
       '#type' => 'checkbox',
@@ -450,6 +492,24 @@ function diff_node_form_build_preview_changes($form, &$form_state) {
 }
 
 /**
+ * Implementation of hook_features_pipe_COMPONENT_alter().
+ */
+function diff_features_pipe_node_alter(&$pipe, $data, $export) {
+  if (!empty($data)) {
+    $variables = array(
+      'diff_show_preview_changes_node',
+      'diff_enable_revisions_page_node',
+      'diff_view_mode_preview_node',
+    );
+    foreach ($data as $node_type) {
+      foreach ($variables as $variable_name) {
+        $pipe['variable'][] = $variable_name . '_' . $node_type;
+      }
+    }
+  }
+}
+
+/**
  * Implements hook_theme().
  */
 function diff_theme() {
@@ -492,7 +552,7 @@ function diff_theme() {
  *   The source string to compare from.
  * @param string $b
  *   The target string to compare to.
- * @param boolean $show_header
+ * @param bool $show_header
  *   Display diff context headers. For example, "Line x".
  * @param array $line_stats
  *   This structure tracks line numbers across multiple calls to DiffFormatter.
@@ -681,7 +741,11 @@ function user_entity_diff($old_user, $new_user, $context) {
   $result = array();
   if ($context['entity_type'] == 'user') {
     module_load_include('inc', 'diff', 'includes/user');
-    $options = variable_get('diff_additional_options_user', array('name' => 'name', 'mail' => 'mail', 'status' => 'status'));
+    $options = variable_get('diff_additional_options_user', array(
+      'name' => 'name',
+      'mail' => 'mail',
+      'status' => 'status',
+    ));
     foreach (user_entity_diff_options('user') as $key => $option_label) {
       if (!empty($options[$key])) {
         $func = '_user_entity_diff_additional_options_' . $key;
