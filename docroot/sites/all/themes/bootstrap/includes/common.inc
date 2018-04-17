@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * List of common helper functions for use in Bootstrap based themes.
@@ -31,7 +32,7 @@ define('BOOTSTRAP_VERSION', BOOTSTRAP_VERSION_MAJOR . '.' . BOOTSTRAP_VERSION_MI
  * @param int $length
  *   The length of characters to determine if description is "simple".
  */
-function bootstrap_element_smart_description(&$element, &$target = NULL, $input_only = TRUE, $length = NULL) {
+function bootstrap_element_smart_description(array &$element, array &$target = NULL, $input_only = TRUE, $length = NULL) {
   // Determine if tooltips are enabled.
   static $enabled;
   if (!isset($enabled)) {
@@ -185,9 +186,6 @@ function bootstrap_get_cdn_assets($type = NULL, $provider = NULL, $theme = NULL)
     if (function_exists($function)) {
       $function($data, $theme);
     }
-    // @todo Use drupal_alter() once CDN is in bootstrap_core companion module.
-    // drupal_alter('bootstrap_cdn_provider_' . $provider . '_assets', $data, $theme);
-
     // Iterate over each type.
     foreach ($types as $type) {
       if (variable_get("preprocess_$type", FALSE) && !empty($data['min'][$type])) {
@@ -312,6 +310,8 @@ function bootstrap_include($theme, $path) {
  * @param string $prefix
  *   The prefix used on the $name of the setting, this will be appended with
  *   "_" automatically if set.
+ * @param mixed $default
+ *   The default value to return if setting doesn't exist or is not set.
  *
  * @return mixed
  *   The value of the requested setting, NULL if the setting does not exist.
@@ -320,7 +320,7 @@ function bootstrap_include($theme, $path) {
  *
  * @todo Refactor in 7.x-4.x and get rid of the deprecated settings.
  */
-function bootstrap_setting($name, $theme = NULL, $prefix = 'bootstrap') {
+function bootstrap_setting($name, $theme = NULL, $prefix = 'bootstrap', $default = NULL) {
   $prefix = !empty($prefix) ? $prefix . '_' : '';
   $setting = theme_get_setting($prefix . $name, $theme);
   switch ($prefix . $name) {
@@ -360,7 +360,7 @@ function bootstrap_setting($name, $theme = NULL, $prefix = 'bootstrap') {
       break;
 
   }
-  return $setting;
+  return isset($setting) ? $setting : $default;
 }
 
 /**
@@ -379,7 +379,7 @@ function bootstrap_setting($name, $theme = NULL, $prefix = 'bootstrap') {
  * @return array
  *   The attributes array. Passed by reference.
  */
-function &_bootstrap_get_attributes(&$element, $property = 'attributes') {
+function &_bootstrap_get_attributes(array &$element, $property = 'attributes') {
   // Attempt to retrieve a renderable element attributes first.
   if (
     isset($element['#type']) ||
@@ -428,7 +428,7 @@ function &_bootstrap_get_attributes(&$element, $property = 'attributes') {
  * @return array
  *   The classes array. Passed by reference.
  */
-function &_bootstrap_get_classes(&$element, $property = 'attributes') {
+function &_bootstrap_get_classes(array &$element, $property = 'attributes') {
   $attributes = &_bootstrap_get_attributes($element, $property);
 
   if (!isset($attributes['class'])) {
@@ -461,7 +461,7 @@ function &_bootstrap_get_classes(&$element, $property = 'attributes') {
  *   normal attributes, but can be "wrapper_attributes" or
  *   "input_group_attributes".
  */
-function _bootstrap_add_class($class, &$element, $property = 'attributes') {
+function _bootstrap_add_class($class, array &$element, $property = 'attributes') {
   // Retrieve the element's classes.
   $classes = &_bootstrap_get_classes($element, $property);
 
@@ -494,7 +494,7 @@ function _bootstrap_add_class($class, &$element, $property = 'attributes') {
  *   normal attributes, but can be "wrapper_attributes" or
  *   "input_group_attributes".
  */
-function _bootstrap_remove_class($class, &$element, $property = 'attributes') {
+function _bootstrap_remove_class($class, array &$element, $property = 'attributes') {
   // Retrieve the element's classes.
   $classes = &_bootstrap_get_classes($element, $property);
 
@@ -961,14 +961,14 @@ function _bootstrap_icon($name, $default = NULL, array $attributes = array()) {
  * backport of 8.x-3.x code so the added $attributes parameter can be more
  * easily dealt with.
  *
- * @see https://www.drupal.org/project/bootstrap/issues/2844885
- *
  * @param string $name
  *   The icon name, minus the "glyphicon-" prefix.
  * @param array|string $default
  *   (Optional) The default render array to use if $name is not available.
  * @param array $attributes
  *   (Optional) Additional attributes to merge onto the icon.
+ *
+ * @see https://www.drupal.org/project/bootstrap/issues/2844885
  *
  * @return array
  *   The render containing the icon defined by $name, $default value if
@@ -982,7 +982,7 @@ function _bootstrap_glyphicon($name, $default = array(), array $attributes = arr
     // Attempt to use the Icon API module, if enabled and it generates output.
     if (module_exists('icon')) {
       $icon = array(
-        '#type' => 'icon',
+        '#theme' => 'icon',
         '#bundle' => 'bootstrap',
         '#icon' => 'glyphicon-' . $name,
         '#attributes' => $attributes,
@@ -1018,18 +1018,17 @@ function _bootstrap_glyphicon($name, $default = array(), array $attributes = arr
  * Determine whether or not Bootstrap Glyphicons can be used.
  */
 function _bootstrap_glyphicons_supported() {
+  global $theme;
+
   // Use the advanced drupal_static() pattern, since this has the potential to
   // be called very often by _bootstrap_icon().
   static $drupal_static_fast;
   if (!isset($drupal_static_fast)) {
     $drupal_static_fast['supported'] = &drupal_static(__FUNCTION__);
-    // Get the active theme.
-    $drupal_static_fast['theme'] = variable_get('theme_default', $GLOBALS['theme']);
   }
 
   // Get static data.
   $supported = &$drupal_static_fast['supported'];
-  $theme = &$drupal_static_fast['theme'];
 
   // Retrieve supported themes.
   if (!isset($supported)) {
@@ -1040,33 +1039,35 @@ function _bootstrap_glyphicons_supported() {
     if (($cache = cache_get($cid)) && !empty($cache->data)) {
       $supported = $cache->data;
     }
+  }
 
-    if (!isset($supported[$theme])) {
-      // Bootstrap based themes are enabled by default to use CDN. Check if
-      // that is the case here so no file discovery is necessary. If the active
-      // theme does not have this setting, it falls back to the base theme that
-      // does.
-      $supported[$theme] = !!bootstrap_get_cdn_assets('css', NULL, $theme);
+  // Determine active theme support if not yet set.
+  if (!isset($supported[$theme])) {
+    // Bootstrap based themes are enabled by default to use CDN. Check if
+    // that is the case here so no file discovery is necessary. If the active
+    // theme does not have this setting, it falls back to the base theme that
+    // does.
+    $supported[$theme] = !!bootstrap_get_cdn_assets('css', NULL, $theme);
 
-      // CDN not used, iterate over all of the active (base) themes to determine
-      // if they contain glyphicon font files.
-      if (!$supported[$theme]) {
-        foreach (_bootstrap_get_base_themes($theme, TRUE) as $_theme) {
-          // Scan the theme for files.
-          $fonts = _bootstrap_file_scan_directory(drupal_get_path('theme', $_theme), '/glyphicons-halflings-regular\.(eot|svg|ttf|woff)$/');
+    // CDN not used, iterate over all of the active (base) themes to determine
+    // if they contain glyphicon font files.
+    if (!$supported[$theme]) {
+      foreach (_bootstrap_get_base_themes($theme, TRUE) as $_theme) {
+        // Scan the theme for files.
+        $fonts = _bootstrap_file_scan_directory(drupal_get_path('theme', $_theme), '/glyphicons-halflings-regular\.(eot|svg|ttf|woff)$/');
 
-          // Fonts found, stop the search.
-          if (!empty($fonts)) {
-            $supported[$theme] = TRUE;
-            break;
-          }
+        // Fonts found, stop the search.
+        if (!empty($fonts)) {
+          $supported[$theme] = TRUE;
+          break;
         }
       }
-
-      // Cache all supported themes now that this theme is added to the array.
-      cache_set($cid, $supported);
     }
+
+    // Cache all supported themes now that this theme is added to the array.
+    cache_set($cid, $supported);
   }
+
   return $supported[$theme];
 }
 
@@ -1079,7 +1080,7 @@ function _bootstrap_glyphicons_supported() {
  * @return bool
  *   TRUE or FALSE.
  */
-function _bootstrap_is_button($element) {
+function _bootstrap_is_button(array $element) {
   return
     !empty($element['#type']) &&
     !empty($element['#value']) && (
@@ -1095,7 +1096,7 @@ function _bootstrap_is_button($element) {
  * @param array $element
  *   The form element, passed by reference.
  */
-function _bootstrap_colorize_button(&$element) {
+function _bootstrap_colorize_button(array &$element) {
   if (_bootstrap_is_button($element)) {
     // Do not add the class if one is already present in the array.
     $button_classes = array(
@@ -1216,7 +1217,7 @@ function _bootstrap_colorize_text($string, $default = '') {
  * @param array $element
  *   The form element, passed by reference.
  */
-function _bootstrap_iconize_button(&$element) {
+function _bootstrap_iconize_button(array &$element) {
   if (bootstrap_setting('button_iconize') && _bootstrap_is_button($element) && ($icon = _bootstrap_iconize_text($element['#value']))) {
     $element['#icon'] = $icon;
   }
@@ -1295,7 +1296,7 @@ function _bootstrap_iconize_text($string, $default = '') {
  * @param array $variables
  *   The theme implementation variables array.
  */
-function _bootstrap_preprocess_theme_suggestion(&$variables) {
+function _bootstrap_preprocess_theme_suggestion(array &$variables) {
   $registry = theme_get_registry();
   if (!empty($variables['theme_hook_suggestion']) && !empty($registry[$variables['theme_hook_suggestion']]['preprocess functions'])) {
     // Save the suggestion as the hook to pass to the function.
@@ -1324,7 +1325,7 @@ function _bootstrap_preprocess_theme_suggestion(&$variables) {
  * @param array $variables
  *   The theme implementation variables array.
  */
-function _bootstrap_process_theme_suggestion(&$variables) {
+function _bootstrap_process_theme_suggestion(array &$variables) {
   $registry = theme_get_registry();
   if (!empty($variables['theme_hook_suggestion']) && !empty($registry[$variables['theme_hook_suggestion']]['process functions'])) {
     // Save the suggestion as the hook to pass to the function.
@@ -1351,10 +1352,10 @@ function _bootstrap_process_theme_suggestion(&$variables) {
  *
  * @param string $string
  *   The string of text to check "simple" criteria on.
- * @param int|FALSE $length
+ * @param int|false $length
  *   The length of characters used to determine whether or not $string is
  *   considered "simple". Set explicitly to FALSE to disable this criteria.
- * @param array|FALSE $allowed_tags
+ * @param array|false $allowed_tags
  *   An array of allowed tag elements. Set explicitly to FALSE to disable this
  *   criteria.
  * @param bool $html

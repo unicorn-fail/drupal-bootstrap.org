@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * theme-settings.php
@@ -66,7 +67,7 @@ function bootstrap_form_system_theme_settings_alter(&$form, $form_state, $form_i
     '#group' => 'bootstrap',
   );
 
-  //Container
+  // Container.
   $form['general']['container'] = array(
     '#type' => 'fieldset',
     '#title' => t('Container'),
@@ -220,10 +221,15 @@ function bootstrap_form_system_theme_settings_alter(&$form, $form_state, $form_i
     '#description' => t('Add zebra-striping to any table row within the <code>&lt;tbody&gt;</code>. <strong>Note:</strong> Striped tables are styled via the <code>:nth-child</code> CSS selector, which is not available in Internet Explorer 8.'),
   );
   $form['general']['tables']['bootstrap_table_responsive'] = array(
-    '#type' => 'checkbox',
+    '#type' => 'select',
     '#title' => t('Responsive tables'),
     '#default_value' => bootstrap_setting('table_responsive', $theme),
-    '#description' => t('Makes tables responsive by wrapping them in <code>.table-responsive</code> to make them scroll horizontally up to small devices (under 768px). When viewing on anything larger than 768px wide, you will not see any difference in these tables.'),
+    '#description' => t('Wraps tables with <code>.table-responsive</code> to make them horizontally scroll when viewing them on devices under 768px. When viewing on devices larger than 768px, you will not see a difference in the presentational aspect of these tables. The <code>Automatic</code> option will only apply this setting for front-end facing tables, not the tables in administrative areas.'),
+    '#options' => array(
+      -1 => t('Automatic'),
+      0 => t('Disabled'),
+      1 => t('Enabled'),
+    ),
   );
 
   // Components.
@@ -310,7 +316,7 @@ function bootstrap_form_system_theme_settings_alter(&$form, $form_state, $form_i
     '#default_value' => bootstrap_setting('navbar_inverse', $theme),
   );
 
-  // Pager
+  // Pager.
   $form['components']['pager'] = array(
     '#type' => 'fieldset',
     '#title' => t('Pagination'),
