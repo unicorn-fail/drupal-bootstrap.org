@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "d41ebbc75e864fa00cf36ceac54fccd0",
+    "content-hash": "0120e28f7de147bc58254f20fc3a3196",
     "packages": [
         {
             "name": "gitonomy/gitlib",
@@ -62,45 +62,38 @@
         },
         {
             "name": "league/commonmark",
-            "version": "0.17.5",
+            "version": "0.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/thephpleague/commonmark.git",
-                "reference": "82d7ab62d7f68391cb9d323f3ccce50be24a5369"
+                "reference": "984455f72d4f07669c1f5c545768f60c4e871585"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/82d7ab62d7f68391cb9d323f3ccce50be24a5369",
-                "reference": "82d7ab62d7f68391cb9d323f3ccce50be24a5369",
+                "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/984455f72d4f07669c1f5c545768f60c4e871585",
+                "reference": "984455f72d4f07669c1f5c545768f60c4e871585",
                 "shasum": ""
             },
             "require": {
                 "ext-mbstring": "*",
-                "php": ">=5.6.5"
+                "php": ">=5.4.8"
             },
             "replace": {
                 "colinodell/commonmark-php": "*"
             },
             "require-dev": {
-                "cebe/markdown": "~1.0",
-                "commonmark/commonmark.js": "0.28",
                 "erusev/parsedown": "~1.0",
+                "jgm/commonmark": "0.21",
+                "jgm/smartpunct": "0.21",
                 "michelf/php-markdown": "~1.4",
-                "mikehaertl/php-shellcommand": "^1.2",
-                "phpunit/phpunit": "^5.7|^6.5",
-                "scrutinizer/ocular": "^1.1",
-                "symfony/finder": "^3.0|^4.0"
+                "phpunit/phpunit": "~4.3",
+                "phpunit/phpunit-mock-objects": "2.3.0",
+                "symfony/finder": "~2.3"
             },
-            "suggest": {
-                "league/commonmark-extras": "Library of useful extensions including smart punctuation"
-            },
-            "bin": [
-                "bin/commonmark"
-            ],
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "0.18-dev"
+                    "dev-master": "0.11-dev"
                 }
             },
             "autoload": {
@@ -116,7 +109,7 @@
                 {
                     "name": "Colin O'Dell",
                     "email": "colinodell@gmail.com",
-                    "homepage": "https://www.colinodell.com",
+                    "homepage": "http://www.colinodell.com",
                     "role": "Lead Developer"
                 }
             ],
@@ -127,7 +120,7 @@
                 "markdown",
                 "parser"
             ],
-            "time": "2018-03-29T14:35:19+00:00"
+            "time": "2015-07-25T14:37:05+00:00"
         },
         {
             "name": "psr/log",
@@ -449,33 +442,31 @@
         },
         {
             "name": "webuni/commonmark-attributes-extension",
-            "version": "dev-master",
+            "version": "0.2.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/jdavidbakr/commonmark-attributes-extension.git",
-                "reference": "6ea53656c33809a7d4720870fa3386f15cfb7383"
+                "url": "https://github.com/webuni/commonmark-attributes-extension.git",
+                "reference": "145216fbebfcabdecc0fb2ecdab24e7c6adec454"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jdavidbakr/commonmark-attributes-extension/zipball/6ea53656c33809a7d4720870fa3386f15cfb7383",
-                "reference": "6ea53656c33809a7d4720870fa3386f15cfb7383",
+                "url": "https://api.github.com/repos/webuni/commonmark-attributes-extension/zipball/145216fbebfcabdecc0fb2ecdab24e7c6adec454",
+                "reference": "145216fbebfcabdecc0fb2ecdab24e7c6adec454",
                 "shasum": ""
             },
             "require": {
-                "league/commonmark": "^0.15|^0.16|^0.17",
-                "php": ">=5.6"
+                "league/commonmark": "0.10.*|0.11.*",
+                "php": ">=5.4"
             },
             "require-dev": {
-                "friendsofphp/php-cs-fixer": "^1.9",
-                "phpunit/phpunit": "^4.3|^5.0",
-                "sllh/php-cs-fixer-styleci-bridge": "^2.0",
-                "symfony/var-dumper": "^2.8|^3.0",
-                "webuni/commonmark-table-extension": "~0.4"
+                "fabpot/php-cs-fixer": "^1.9",
+                "phpunit/phpunit": "^4.3",
+                "webuni/commonmark-table-extension": "~0.3"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "0.6-dev"
+                    "dev-master": "0.1-dev"
                 }
             },
             "autoload": {
@@ -483,6 +474,7 @@
                     "Webuni\\CommonMark\\AttributesExtension\\": "src"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -500,39 +492,34 @@
                 "commonmark",
                 "markdown"
             ],
-            "support": {
-                "source": "https://github.com/jdavidbakr/commonmark-attributes-extension/tree/master"
-            },
-            "time": "2018-03-03T18:50:46+00:00"
+            "time": "2015-07-27T12:24:53+00:00"
         },
         {
             "name": "webuni/commonmark-table-extension",
-            "version": "0.8.0",
+            "version": "0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/webuni/commonmark-table-extension.git",
-                "reference": "4304b1f56b26e5213a4a781b654f62ef5ed8fbe3"
+                "reference": "d64d452d0d5800e168b0f105745677c2a61c5041"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webuni/commonmark-table-extension/zipball/4304b1f56b26e5213a4a781b654f62ef5ed8fbe3",
-                "reference": "4304b1f56b26e5213a4a781b654f62ef5ed8fbe3",
+                "url": "https://api.github.com/repos/webuni/commonmark-table-extension/zipball/d64d452d0d5800e168b0f105745677c2a61c5041",
+                "reference": "d64d452d0d5800e168b0f105745677c2a61c5041",
                 "shasum": ""
             },
             "require": {
-                "league/commonmark": "^0.16|^0.17",
-                "php": "^5.6|^7.0"
+                "league/commonmark": "0.10.*|0.11.*",
+                "php": ">=5.4"
             },
             "require-dev": {
-                "friendsofphp/php-cs-fixer": "^2.9",
-                "phpunit/phpunit": "^5.4|^6.0",
-                "symfony/var-dumper": "^3.0|^4.0",
-                "vimeo/psalm": "~0.3"
+                "fabpot/php-cs-fixer": "^1.9",
+                "phpunit/phpunit": "^4.3"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "0.8-dev"
+                    "dev-master": "0.4-dev"
                 }
             },
             "autoload": {
@@ -547,11 +534,8 @@
             "authors": [
                 {
                     "name": "Martin Hasoň",
-                    "email": "martin.hason@gmail.com"
-                },
-                {
-                    "name": "Webuni s.r.o.",
-                    "homepage": "https://www.webuni.cz"
+                    "email": "martin.hason@gmail.com",
+                    "role": "Lead Developer"
                 }
             ],
             "description": "The table extension for CommonMark PHP implementation",
@@ -561,19 +545,17 @@
                 "markdown",
                 "table"
             ],
-            "time": "2018-01-24T12:30:02+00:00"
+            "time": "2015-07-27T12:17:09+00:00"
         }
     ],
     "packages-dev": [],
     "aliases": [],
-    "minimum-stability": "dev",
-    "stability-flags": {
-        "webuni/commonmark-attributes-extension": 20
-    },
+    "minimum-stability": "stable",
+    "stability-flags": [],
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=5.6.5"
+        "php": ">=5.3.0"
     },
     "platform-dev": []
 }
