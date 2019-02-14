@@ -10,6 +10,42 @@
 define('BOOTSTRAP_CDN_PROVIDER_PATH', 'public://bootstrap/cdn_providers');
 
 /**
+ * Retrieves JSON from a URI.
+ *
+ * @param string $uri
+ *   The URI to retrieve JSON from.
+ * @param array $options
+ *   The options to pass to the HTTP client.
+ * @param \Exception|null $exception
+ *   The exception thrown if there was an error, passed by reference.
+ *
+ * @return array
+ *   The requested JSON array.
+ */
+function _bootstrap_cdn_provider_request_json($uri, array $options = array(), &$exception = NULL) {
+  $json = array();
+
+  $options += array(
+    'method' => 'GET',
+    'headers' => array(
+      'User-Agent' => 'Drupal Bootstrap 7.x-3.x (https://www.drupal.org/project/bootstrap)',
+    ),
+  );
+
+  try {
+    $response = drupal_http_request($uri, $options);
+    if ($response->code == 200) {
+      $json = drupal_json_decode($response->data) ?: array();
+    }
+  }
+  catch (\Exception $e) {
+    $exception = $e;
+  }
+
+  return $json;
+}
+
+/**
  * Retrieves a list of available CDN providers for the Bootstrap framework.
  *
  * @param string $provider
@@ -46,13 +82,12 @@ function bootstrap_cdn_provider($provider = NULL, $reset = FALSE) {
           'title' => t('Custom'),
         ),
         'jsdelivr' => array(
-          'api' => 'https://api.jsdelivr.com/v1/bootstrap/libraries',
           'title' => t('jsDelivr'),
-          'description' => t('<p style="background:#EB4C36"><a href="!jsdelivr" target="_blank"><img src="//www.jsdelivr.com/img/logo.png" alt="jsDelivr Logo"/></a></p><p><a href="!jsdelivr" target="_blank">jsDelivr</a> is a free multi-CDN infrastructure that uses <a href="!maxcdn" target="_blank">MaxCDN</a>, <a href="!cloudflare" target="_blank">Cloudflare</a> and many others to combine their powers for the good of the open source community... <a href="!jsdelivr_about" target="_blank">read more</a></p>', array(
+          'description' => t('<p><a href="!jsdelivr" target="_blank">jsDelivr</a> is a free multi-CDN infrastructure that uses <a href="!maxcdn" target="_blank">MaxCDN</a>, <a href="!cloudflare" target="_blank">Cloudflare</a> and many others to combine their powers for the good of the open source community... <a href="!jsdelivr_about" target="_blank">read more</a></p>', array(
             '!jsdelivr' => 'https://www.jsdelivr.com',
             '!jsdelivr_about' => 'https://www.jsdelivr.com/about',
-            '!maxcdn' => 'http://www.maxcdn.com',
-            '!cloudflare' => 'http://www.cloudflare.com',
+            '!maxcdn' => 'https://www.maxcdn.com',
+            '!cloudflare' => 'https://www.cloudflare.com',
           )),
         ),
       );
@@ -94,6 +129,14 @@ function bootstrap_cdn_provider($provider = NULL, $reset = FALSE) {
           $request = drupal_http_request($data['api']);
         }
 
+        // Skip alter (processing) if using backported CDN Provider logic.
+        if ($instance = _bootstrap_backport_cdn_provider(NULL, $name)) {
+          // Go ahead and use its description and label though.
+          $data['description'] = $instance->getDescription();
+          $data['title'] = $instance->getLabel();
+          continue;
+        }
+
         // Alter the specific provider.
         $function = 'bootstrap_bootstrap_cdn_provider_' . $name . '_alter';
         if (function_exists($function)) {
@@ -123,26 +166,55 @@ function bootstrap_cdn_provider($provider = NULL, $reset = FALSE) {
  *   implements these hooks to parse the requested data.
  */
 function bootstrap_bootstrap_cdn_provider_jsdelivr_alter(array &$provider, \stdClass $request = NULL) {
-  $json = array();
   $provider['versions'] = array();
   $provider['themes'] = array();
 
-  if ($request->code === '200' && !empty($request->data)) {
-    $json = drupal_json_decode($request->data);
-  }
+  $json = array();
+  foreach (array('bootstrap', 'bootswatch') as $package) {
+    $data = array('name' => $package, 'assets' => array());
+    $latest = '0.0.0';
+    $versions = array();
+    $packageJson = _bootstrap_cdn_provider_request_json("https://data.jsdelivr.com/v1/package/npm/$package") + array('versions' => array());
+    foreach ($packageJson['versions'] as $key => $version) {
+      // Skip irrelevant versions.
+      if (!preg_match('/^' . substr(BOOTSTRAP_VERSION, 0, 1) . '\.\d+\.\d+$/', $version)) {
+        continue;
+      }
+      $versionJson = _bootstrap_cdn_provider_request_json("https://data.jsdelivr.com/v1/package/npm/$package@$version/flat");
 
-  // Expected library names from jsDelivr API v1. Must use "twitter-bootstrap"
-  // instead of "bootstrap" (which is just a folder alias).
-  // @see https://www.drupal.org/node/2504343
-  // @see https://github.com/jsdelivr/api/issues/94
-  $bootstrap = 'twitter-bootstrap';
-  $bootswatch = 'bootswatch';
+      // Skip empty files.
+      if (empty($versionJson['files'])) {
+        continue;
+      }
+
+      $versions[] = $version;
+      if (version_compare($latest, $version) === -1) {
+        $latest = $version;
+      }
+
+      $asset = array('files' => array(), 'version' => $version);
+      foreach ($versionJson['files'] as $file) {
+        // Skip old bootswatch file structure.
+        if ($package === 'bootswatch' && preg_match('`^/2|/bower_components`', $file['name'], $matches)) {
+          continue;
+        }
+        preg_match('`([^/]*)/bootstrap(-theme)?(\.min)?\.(js|css)$`', $file['name'], $matches);
+        if (!empty($matches[1]) && !empty($matches[4])) {
+          $asset['files'][] = $file['name'];
+        }
+      }
+      $data['assets'][] = $asset;
+    }
+    $data['lastversion'] = $latest;
+    $data['versions'] = $versions;
+    $json[] = $data;
+  }
 
   // Extract the raw asset files from the JSON data for each framework.
   $libraries = array();
   if ($json) {
     foreach ($json as $data) {
-      if ($data['name'] === $bootstrap || $data['name'] === $bootswatch) {
+      if ($data['name'] === 'bootstrap' || $data['name'] === 'bootswatch') {
         foreach ($data['assets'] as $asset) {
           if (preg_match('/^' . BOOTSTRAP_VERSION_MAJOR . '\.\d\.\d$/', $asset['version'])) {
             $libraries[$data['name']][$asset['version']] = $asset['files'];
@@ -153,17 +225,17 @@ function bootstrap_bootstrap_cdn_provider_jsdelivr_alter(array &$provider, \stdC
   }
 
   // If the main bootstrap library could not be found, then provide defaults.
-  if (!isset($libraries[$bootstrap])) {
+  if (!isset($libraries['bootstrap'])) {
     $provider['error'] = TRUE;
     $provider['versions'][BOOTSTRAP_VERSION] = BOOTSTRAP_VERSION;
     $provider['themes'][BOOTSTRAP_VERSION] = array(
       'bootstrap' => array(
         'title' => t('Bootstrap'),
-        'css' => array('//cdn.jsdelivr.net/bootstrap/' . BOOTSTRAP_VERSION . '/css/bootstrap.css'),
-        'js' => array('//cdn.jsdelivr.net/bootstrap/' . BOOTSTRAP_VERSION . '/js/bootstrap.js'),
+        'css' => array('https://cdn.jsdelivr.net/npm/bootstrap@' . BOOTSTRAP_VERSION . '/dist/css/bootstrap.css'),
+        'js' => array('https://cdn.jsdelivr.net/npm/bootstrap@' . BOOTSTRAP_VERSION . '/dist/js/bootstrap.js'),
         'min' => array(
-          'css' => array('//cdn.jsdelivr.net/bootstrap/' . BOOTSTRAP_VERSION . '/css/bootstrap.min.css'),
-          'js' => array('//cdn.jsdelivr.net/bootstrap/' . BOOTSTRAP_VERSION . '/js/bootstrap.min.js'),
+          'css' => array('https://cdn.jsdelivr.net/npm/bootstrap@' . BOOTSTRAP_VERSION . '/dist/css/bootstrap.min.css'),
+          'js' => array('https://cdn.jsdelivr.net/npm/bootstrap@' . BOOTSTRAP_VERSION . '/dist/js/bootstrap.min.js'),
         ),
       ),
     );
@@ -171,7 +243,7 @@ function bootstrap_bootstrap_cdn_provider_jsdelivr_alter(array &$provider, \stdC
   }
 
   // Populate the provider array with the versions and themes available.
-  foreach (array_keys($libraries[$bootstrap]) as $version) {
+  foreach (array_keys($libraries['bootstrap']) as $version) {
     $provider['versions'][$version] = $version;
 
     if (!isset($provider['themes'][$version])) {
@@ -179,11 +251,11 @@ function bootstrap_bootstrap_cdn_provider_jsdelivr_alter(array &$provider, \stdC
     }
 
     // Extract Bootstrap themes.
-    $provider['themes'][$version] = drupal_array_merge_deep($provider['themes'][$version], _bootstrap_cdn_provider_jsdelivr_extract_themes($libraries[$bootstrap][$version], "//cdn.jsdelivr.net/bootstrap/$version"));
+    $provider['themes'][$version] = drupal_array_merge_deep($provider['themes'][$version], _bootstrap_cdn_provider_jsdelivr_extract_themes($libraries['bootstrap'][$version], "https://cdn.jsdelivr.net/npm/bootstrap@$version"));
 
     // Extract Bootswatch themes.
-    if (isset($libraries[$bootswatch][$version])) {
-      $provider['themes'][$version] = drupal_array_merge_deep($provider['themes'][$version], _bootstrap_cdn_provider_jsdelivr_extract_themes($libraries[$bootswatch][$version], "//cdn.jsdelivr.net/bootswatch/$version"));
+    if (isset($libraries['bootswatch'][$version])) {
+      $provider['themes'][$version] = drupal_array_merge_deep($provider['themes'][$version], _bootstrap_cdn_provider_jsdelivr_extract_themes($libraries['bootswatch'][$version], "https://cdn.jsdelivr.net/npm/bootswatch@$version"));
     }
   }
 
@@ -267,10 +339,10 @@ function _bootstrap_cdn_provider_jsdelivr_extract_themes(array $files, $base_url
 
       $themes[$theme]['title'] = $title;
       if ($min) {
-        $themes[$theme]['min'][$filetype][] = "$base_url/$path/bootstrap{$matches[2]}$min.$filetype";
+        $themes[$theme]['min'][$filetype][] = "$base_url/" . ltrim($file, '/');
       }
       else {
-        $themes[$theme][$filetype][] = "$base_url/$path/bootstrap{$matches[2]}$min.$filetype";
+        $themes[$theme][$filetype][] = "$base_url/" . ltrim($file, '/');
       }
     }
   }
@@ -450,10 +522,29 @@ function bootstrap_bootstrap_cdn_provider_custom_settings_form_alter(&$element, 
  */
 function bootstrap_bootstrap_cdn_provider_jsdelivr_settings_form_alter(&$element, &$form_state, $provider = array(), $theme = NULL) {
   $version = isset($form_state['values']['bootstrap_cdn_jsdelivr_version']) ? $form_state['values']['bootstrap_cdn_jsdelivr_version'] : bootstrap_setting('cdn_jsdelivr_version', $theme);
+
+  // Use backported CDN Provider logic from 8.x-3.x.
+  if ($instance = _bootstrap_backport_cdn_provider($theme, $provider['name'])) {
+    $versions = $instance->getCdnVersions();
+    $themes = array();
+    foreach ($instance->getCdnThemes($version) as $name => $data) {
+      $themes[$name] = $data['title'];
+    }
+  }
+  else {
+    $versions = isset($provider['versions']) ? $provider['versions'] : array();
+    $themes = array();
+    if (isset($provider['themes'][$version])) {
+      foreach ($provider['themes'][$version] as $_theme => $data) {
+        $themes[$_theme] = $data['title'];
+      }
+    }
+  }
+
   $element['bootstrap_cdn_jsdelivr_version'] = array(
     '#type' => 'select',
     '#title' => t('Version'),
-    '#options' => isset($provider['versions']) ? $provider['versions'] : array(),
+    '#options' => $versions,
     '#default_value' => $version,
     '#ajax' => array(
       'callback' => 'bootstrap_cdn_provider_settings_form_ajax_reload_provider',
@@ -466,13 +557,7 @@ function bootstrap_bootstrap_cdn_provider_jsdelivr_settings_form_alter(&$element
     ));
   }
 
-  // Bootswatch.
-  $themes = array();
-  if (isset($provider['themes'][$version])) {
-    foreach ($provider['themes'][$version] as $_theme => $data) {
-      $themes[$_theme] = $data['title'];
-    }
-  }
+  // Themes.
   $element['bootstrap_cdn_jsdelivr_theme'] = array(
     '#type' => 'select',
     '#title' => t('Theme'),
