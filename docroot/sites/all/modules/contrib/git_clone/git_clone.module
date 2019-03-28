@@ -101,6 +101,11 @@ function _git_clone_path($absolute = FALSE, $create = FALSE) {
  * Implements hook_cron().
  */
 function git_clone_cron() {
+  // Immediately return if in development mode.
+  if (variable_get('git_clone_dev', FALSE)) {
+    return;
+  }
+
   $clones = entity_load('git_clone');
   /** @var GitClone $clone */
   foreach ($clones as $clone) {
@@ -296,7 +301,7 @@ function git_clone_form_api_branch_edit_form_alter(&$form, &$form_state, $form_i
   /** @var GitClone $clone */
   $options = array();
   foreach (entity_load('git_clone') as $clone) {
-    $options[$clone->getPath(FALSE)] = $clone->label();
+    $options[$clone->getPath(FALSE, FALSE)] = $clone->label();
   }
   $form['data']['directories']['#title'] = t('Git Clone Repository');
   $form['data']['directories']['#type'] = 'select';

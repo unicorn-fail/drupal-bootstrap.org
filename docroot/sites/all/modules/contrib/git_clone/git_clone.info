@@ -8,9 +8,8 @@ dependencies[] = entity
 
 files[] = GitCloneStreamWrapper.php
 
-; Information added by Drupal.org packaging script on 2015-08-27
-version = "7.x-1.0-rc2"
+; Information added by Drupal.org packaging script on 2019-03-28
+version = "7.x-1.0"
 core = "7.x"
 project = "git_clone"
-datestamp = "1440648844"
-
+datestamp = "1553795291"

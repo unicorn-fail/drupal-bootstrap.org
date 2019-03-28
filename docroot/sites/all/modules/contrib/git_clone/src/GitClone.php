@@ -263,6 +263,9 @@ class GitClone extends \Entity {
       return FALSE;
     }
     $path = "gitclone://$this->refType/$this->name";
+    if ($absolute) {
+      $path = drupal_realpath($path);
+    }
     if ($create) {
       if (!is_dir($path) && !drupal_mkdir($path, NULL, TRUE)) {
         drupal_set_message(t('The directory %directory does not exist and could not be created.', array('%directory' => $path)), 'error');
@@ -280,9 +283,6 @@ class GitClone extends \Entity {
       if (!drupal_is_cli() && is_dir($path) && !is_writable($path) && !drupal_chmod($path)) {
         drupal_set_message(t('The directory %directory exists but is not writable and could not be made writable.', array('%directory' => $path)), 'error');
       }
-    }
-    if ($absolute) {
-      return drupal_realpath($path);
     }
     return $path;
   }
@@ -677,11 +677,15 @@ class GitClone extends \Entity {
    * @chainable
    */
   protected function reset($hard = TRUE, $clean = TRUE) {
-    $this->run('reset', array('--hard'));
-    if ($clean) {
-      $this->clean();
+    $args = array('HEAD');
+    if ($hard) {
+      $args[] = '--hard';
     }
-    return $this;
+    $result = $this->run('reset', $args);
+    if ($result && $clean) {
+      $result = $this->clean();
+    }
+    return $result;
   }
 
   /**
