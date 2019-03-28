@@ -55,6 +55,23 @@
     ]
   });
 
+  // Fix "url-link" regular expression to allow @ symbols.
+  // @see https://github.com/PrismJS/prism/issues/1841
+  for (var lang in Prism.languages) {
+    if (Prism.languages.hasOwnProperty(lang)) {
+      for (var key in Prism.languages[lang]) {
+        if (Prism.languages[lang].hasOwnProperty(key)) {
+          if (key === 'url-link' && Prism.languages[lang][key] instanceof RegExp) {
+            Prism.languages[lang][key] = /\b([a-z]{3,7}:\/\/|tel:)[\w\-+@%~/.:=&]+(?:\?[\w\-+@%~/.:#=?&!$'()*,;]*)?(?:#[\w\-+@%~/.:#=?&!$'()*,;]*)?/;
+          }
+          if (Prism.languages[lang][key].inside && Prism.languages[lang][key].inside['url-link'] instanceof RegExp) {
+            Prism.languages[lang][key].inside['url-link'] = /\b([a-z]{3,7}:\/\/|tel:)[\w\-+@%~/.:#=?&amp;]+/;
+          }
+        }
+      }
+    }
+  }
+
   // Alias/extend "htm" and "html" languages from "markup" language.
   Prism.languages.htm = Prism.languages.extend('markup', {});
   Prism.languages.html = Prism.languages.extend('markup', {});
@@ -189,7 +206,9 @@
       };
 
       // Determine if the code is inside a collapsible panel. If it is, expand it and then trigger the hashchange.
-      var $toggle = $($pre.parents('fieldset').first().find('[data-toggle=collapse]').data('target'));
+      var $fieldset = $pre.parents('fieldset').first();
+      var target = $fieldset.find('[data-toggle=collapse]').attr('href');
+      var $toggle = $fieldset.find(target);
       if ($toggle[0]) {
         $window.on('shown.bs.collapse', triggerHashchange);
         $toggle.collapse('show');

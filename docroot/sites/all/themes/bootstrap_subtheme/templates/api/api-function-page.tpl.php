@@ -114,5 +114,5 @@ foreach ($call_links as $link) {
   <?php print $namespace; ?>
 <?php endif; ?>
 
-<h3><?php print t('Source'); ?> <?php print $defined; ?></h3>
+<h3 id="source"><?php print t('Source'); ?> <?php print $defined; ?></h3>
 <?php print _db_api_display_code($object, $code, FALSE); ?>

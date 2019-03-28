@@ -154,11 +154,11 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
   }
 
   // Wrap it with a panel if necessary.
-  if ($panel) {
+  if ($panel && $object->object_type !== 'file') {
     $build['#theme_wrappers'] = array('fieldset__api__file_source');
     $build['#title'] = t('Source');
     $build['#collapsible'] = TRUE;
-    $build['#collapsed'] = !($object->object_type === 'file' && preg_match('/(\.tpl\.php|\.html\.twig)$/', $object->file_name));
+    $build['#collapsed'] = TRUE;
     $build['#id'] = 'source-wrapper';
   }
 
@@ -178,9 +178,10 @@ function _db_api_display_code($object, $code, $panel = TRUE) {
  *   The re-formatted documentation.
  */
 function _db_api_display_documentation($object, $documentation = NULL) {
-  // Do not double process markdown files.
-  if (preg_match('/\.md$/', $object->file_name)) {
-    return $documentation;
+  // Skip empty documentation and handle markdown files differently.
+  if (!$documentation || preg_match('/\.md$/', $object->file_name)) {
+    // Skip empty documentation or just show the source for markdown files.
+    return !$documentation || $object->object_type === 'file' ? '' : $documentation;
   }
 
   if (preg_match_all('/<pre[^>]*><code[^>]*>([\w\W]*)<\/code><\/pre>/', $documentation, $matches, PREG_SET_ORDER)) {
@@ -372,29 +373,52 @@ function db_api_parse_md_file(array $docblock) {
   // API uses the file basename as the title by default. Attempt to find the
   // first H1 (#) in the file and use that as the title instead.
   if (preg_match("/# ([^\n]+)\n/Us", $source, $matches)) {
-    $docblock['title'] = check_plain($matches[1]);
-
-    // Remove the title from the documentation (as it's set as the page title).
     _db_api_replace_preg_match($documentation, $matches);
-
-    // Use the title as the start_line point.
-    $line = array_search(trim($matches[0]), explode("\n", $source));
-    if ($line !== FALSE) {
-      $docblock['start_line'] = $line + 1;
-    }
+    $docblock['title'] = check_plain($matches[1]);
   }
 
   // Find and parse all HTML comments that start with "@" as DOXYGEN keywords.
-  if (preg_match_all("/<!-- @([a-z]++)\\s??([\\w\\W]*)\\s??-->/U", $source, $matches, PREG_SET_ORDER)) {
+  if (preg_match_all("/<!-- @([a-z_-]++)\\s??([\\w\\W]*)\\s??-->(\n)?/U", $source, $matches, PREG_SET_ORDER)) {
     foreach ($matches as $match) {
-      // Remove these from both the original source and the documentation.
-      _db_api_replace_preg_match($documentation, $match);
-      _db_api_replace_preg_match($source, $match);
-
       $keyword = $match[1];
-      $value = check_plain(trim($match[2]));
+      $value = check_plain(trim(str_replace("@end$keyword", '', $match[2])));
       $parts = array_filter(explode(' ', $value));
+      $newline = $match[3];
       switch ($keyword) {
+        case 'link':
+          module_load_include('inc', 'api', 'api.formatting');
+          $link = api_link_link($value, $docblock['branch']);
+          if (preg_match('/href="([^"]+)"[^>]+>([^<]+)/', $link, $link_matches)) {
+            $url = $link_matches[1];
+            $title = $link_matches[2];
+            _db_api_replace_preg_match($documentation, $match, "[$title]($url)$newline");
+          }
+          break;
+
+        case 'url':
+          module_load_include('inc', 'api', 'api.formatting');
+
+          // Parse anchors attached to the object name.
+          $anchor = '';
+          if (strpos($value, '#') !== FALSE) {
+            $words = preg_split('/\s+/', trim($value));
+            $parts = explode('#', array_shift($words));
+            $name = array_shift($parts);
+            if ($parts) {
+              $anchor = '#' . drupal_clean_css_identifier(implode('#', $parts));
+            }
+            $link = api_link_name($name, $docblock['branch'], '', '', NULL, NULL, implode(' ', $words), TRUE);
+          }
+          else {
+            $link = api_link_link($value, $docblock['branch']);
+          }
+
+          if (preg_match('/href="([^"]+)"/', $link, $link_matches)) {
+            $url = $link_matches[1] . $anchor;
+            _db_api_replace_preg_match($documentation, $match, "$url$newline");
+          }
+          break;
+
         case 'file':
           $docblock['summary'] = $value;
           break;
@@ -449,14 +473,17 @@ function db_api_parse_md_file(array $docblock) {
           }
           break;
       }
+
+      // Ensure comment is removed from the documentation.
+      _db_api_replace_preg_match($documentation, $match);
     }
   }
 
   // Parse the documentation.
-  $docblock['documentation'] = commonmark_convert_to_html($documentation);
+  $docblock['documentation'] = commonmark_convert_to_html(trim($documentation));
 
   // Wrap the source code.
-  $docblock['code'] = '<pre class="php"><code>' . $source . '</code></pre>';
+  $docblock['code'] = '<pre class="php"><code>' . trim($source) . '</code></pre>';
 
   // Save the docblock.
   api_save_documentation(array($docblock));
