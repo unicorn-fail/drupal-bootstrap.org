@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drupal-bootstrap
+  labels:
+    app: bootstrap
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: bootstrap
+  template:
+    metadata:
+      labels:
+        app: bootstrap
+    spec:
+      volumes:
+        - name: app-code
+          emptyDir: {}
+        - name: localsettings
+          secret:
+            secretName: bootstrap-localsettings
+      containers:
+        - name: fpm
+          image: quay.io/kindlehl/php-fpm:bootstrap-v2
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9000
+          volumeMounts:
+            - mountPath: /var/www/drupal-bootstrap.org
+              name: app-code
+        - name: app
+          image: quay.io/kindlehl/bootstrap:beta-0.0.27
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: /var/www/drupal-bootstrap.org
+              name: app-code
+      initContainers:
+        - name: app-init
+          image: quay.io/kindlehl/bootstrap:beta-0.0.27
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /var/www/drupal-bootstrap.org
+              name: app-code
+            - mountPath: /localsettings
+              name: localsettings
+          command:
+            - /bin/sh
+            - -c
+            - ls /var/www/drupal-bootstrap.org && cp -Ra /var/www/drupal-bootstrap.org-build/* /var/www/drupal-bootstrap.org && cp /localsettings/settings.local.php /var/www/drupal-bootstrap.org/docroot/sites/default
