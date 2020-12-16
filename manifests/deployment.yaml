@@ -50,4 +50,4 @@ spec:
           command:
             - /bin/sh
             - -c
-            - ls /var/www/drupal-bootstrap.org && cp -Ra /var/www/drupal-bootstrap.org-build/* /var/www/drupal-bootstrap.org && cp /localsettings/settings.local.php /var/www/drupal-bootstrap.org/docroot/sites/default
+            - cp -Ra /var/www/drupal-bootstrap.org-build/* /var/www/drupal-bootstrap.org && cp /localsettings/settings.local.php /var/www/drupal-bootstrap.org/docroot/sites/default
