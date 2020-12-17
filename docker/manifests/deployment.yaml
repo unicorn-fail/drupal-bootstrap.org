@@ -23,7 +23,7 @@ spec:
             secretName: bootstrap-localsettings
       containers:
         - name: fpm
-          image: quay.io/kindlehl/php-fpm:bootstrap-v2
+          image: quay.io/kindlehl/php-fpm:bootstrap-v5
           imagePullPolicy: Always
           ports:
             - containerPort: 9000
@@ -31,7 +31,7 @@ spec:
             - mountPath: /var/www/drupal-bootstrap.org
               name: app-code
         - name: app
-          image: quay.io/kindlehl/bootstrap:beta-0.0.27
+          image: quay.io/kindlehl/bootstrap:beta-0.0.34
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -40,7 +40,7 @@ spec:
               name: app-code
       initContainers:
         - name: app-init
-          image: quay.io/kindlehl/bootstrap:beta-0.0.27
+          image: quay.io/kindlehl/bootstrap:beta-0.0.34
           imagePullPolicy: Always
           volumeMounts:
             - mountPath: /var/www/drupal-bootstrap.org
