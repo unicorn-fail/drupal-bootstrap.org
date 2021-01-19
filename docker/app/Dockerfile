@@ -15,20 +15,20 @@ RUN mkdir /var/www/drupal-bootstrap.org-build
 WORKDIR /var/www/drupal-bootstrap.org-build
 
 # Copy site code
-COPY --chown=root:www-data docroot/ docroot/
-COPY --chown=root:www-data composer* ./
+COPY --chown=root:root docroot/ docroot/
+COPY --chown=root:root composer* ./
 
 RUN composer install
 
 COPY docker/app/conf/apache /etc/apache2/sites-enabled
 
 # Copy in basic settings.php.
-COPY --chown=root:www-data docker/app/conf/drupal/* /var/www/drupal-bootstrap.org-build/docroot/sites/default/
+COPY --chown=root:root docker/app/conf/drupal/* /var/www/drupal-bootstrap.org-build/docroot/sites/default/
 
 RUN mkdir docroot/sites/default/files
 
 # Set permissions on build and install Drush
-RUN chown -R root:www-data docroot && \
+RUN chown -R root:root docroot && \
     chmod -R 750 docroot && \
     chmod -R 770 docroot/sites/default/files && \
     wget https://github.com/drush-ops/drush/releases/download/8.1.18/drush.phar -O /usr/local/bin/drush && \
