@@ -34,7 +34,13 @@ RUN chown -R root:root docroot && \
     wget https://github.com/drush-ops/drush/releases/download/8.1.18/drush.phar -O /usr/local/bin/drush && \
     chmod +x /usr/local/bin/drush
 
-EXPOSE 80
+# Configure permissions so apache can open log files when running as a non-root user
+RUN chmod g+wx /var/log/apache2
+
+RUN sed -i 's/80/8080/g' /etc/apache2/ports.conf && \
+    sed -i 's/443/8443/g' /etc/apache2/ports.conf
+
+EXPOSE 8080
 
 COPY docker/app/entrypoint.sh /usr/local/bin/entrypoint.sh
 ENTRYPOINT entrypoint.sh
