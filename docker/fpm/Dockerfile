@@ -47,7 +47,8 @@ RUN { \
 RUN wget https://github.com/drush-ops/drush/releases/download/8.1.18/drush.phar -O /usr/local/bin/drush && \
     chmod +x /usr/local/bin/drush
 
-RUN mkdir -p /var/www/drupal-bootstrap.org-repositories && \
+RUN mkdir -p /var/www/drupal-bootstrap.org-repositories  && mkdir /run/php/ && \
+    chown root:root /run/php && chmod g+wrx /run/php && \
     chown -R root:www-data /var/www/drupal-bootstrap.org-repositories && \
     chmod -R 770 /var/www/drupal-bootstrap.org-repositories
 
