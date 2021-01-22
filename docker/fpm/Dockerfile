@@ -38,19 +38,29 @@ RUN { \
 
 # Configure PHP in general
 RUN { \
-    echo 'access.log = /dev/stdout'; \
-    echo 'php_admin_value[error_log] = /dev/stderr'; \
+    echo 'catch_workers_output = yes'; \
+    echo 'access.log = /var/log/php_access.log'; \
+    echo 'php_admin_value[error_log] = /var/log/php_error.log'; \
     echo 'php_admin_flag[log_errors] = on'; \
     echo 'php_flag[display_errors] = off'; \
+    echo 'php_admin_value[display_startup_errors] = on'; \
+    echo 'php_admin_value[error_reporting] = E_ALL & ~E_NOTICE & ~E_WARNING & ~E_STRICT & ~E_DEPRECATED'; \
   } >> /etc/php/$PHP_VERSION/fpm/pool.d/www.conf
+
+RUN touch /var/log/php_access.log /var/log/php_error.log && \
+    chmod g+rw /var/log/php_access.log /var/log/php_error.log && \
+    chown root:root /var/log/php_access.log /var/log/php_error.log
 
 RUN wget https://github.com/drush-ops/drush/releases/download/8.1.18/drush.phar -O /usr/local/bin/drush && \
     chmod +x /usr/local/bin/drush
 
-RUN mkdir -p /var/www/drupal-bootstrap.org-repositories  && mkdir /run/php/ && \
-    chown root:root /run/php && chmod g+wrx /run/php && \
+RUN mkdir -p /var/www/drupal-bootstrap.org-repositories && \
+    mkdir /run/php/ && \
+    chown root:root /run/php && \
+    chmod g+wrx /run/php && \
     chown -R root:www-data /var/www/drupal-bootstrap.org-repositories && \
-    chmod -R 770 /var/www/drupal-bootstrap.org-repositories
+    chmod -R 770 /var/www/drupal-bootstrap.org-repositories && \
+    chmod -R g+rw /var/log /etc/php
 
 COPY docker/fpm/entrypoint.sh /usr/local/bin/entrypoint.sh
 
