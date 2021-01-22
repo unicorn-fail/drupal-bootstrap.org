@@ -35,8 +35,10 @@ RUN chown -R root:root docroot && \
     chmod +x /usr/local/bin/drush
 
 # Configure permissions so apache can open log files when running as a non-root user
-RUN chmod -R g+wx /var/log/apache2 && \
-    chown -R root:root /var/log/apache2 && \
+RUN touch /var/log/apache2/bootstrap-access.log /var/log/apache2/bootstrap-error.log && \
+    chmod g+rw /var/log/apache2/bootstrap-access.log /var/log/apache2/bootstrap-error.log && \
+    chmod g+w /var/run/apache2 && \
+    chown root:root /var/log/apache2/bootstrap-access.log /var/log/apache2/bootstrap-error.log && \
     sed -i 's/80/8080/g' /etc/apache2/ports.conf && \
     sed -i 's/443/8443/g' /etc/apache2/ports.conf
 
