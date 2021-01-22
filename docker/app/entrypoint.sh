@@ -12,4 +12,4 @@ tail -f /var/log/apache2/bootstrap-error.log 1>&2 &
 . /etc/apache2/envvars
 
 # Run apache via exec syscall
-exec apache2 -D FOREGROUND 
+exec apache2 -D FOREGROUND -k start
