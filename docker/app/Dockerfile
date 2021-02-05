@@ -42,7 +42,8 @@ RUN touch /var/log/apache2/bootstrap-access.log /var/log/apache2/bootstrap-error
     chmod g+w /var/run/apache2 && \
     chown root:root /var/log/apache2/bootstrap-access.log /var/log/apache2/bootstrap-error.log && \
     sed -i 's/80/8080/g' /etc/apache2/ports.conf && \
-    sed -i 's/443/8443/g' /etc/apache2/ports.conf
+    sed -i 's/443/8443/g' /etc/apache2/ports.conf && \
+    rm -f /etc/apache2/sites-enabled/000-default.conf
 
 EXPOSE 8080
 
