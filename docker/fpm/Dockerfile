@@ -6,7 +6,9 @@ ENV PHP_VERSION=7.2
 # Install sury repo and basic PHP-FPM
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y curl && \
+    apt-get install -y apt-transport-https lsb-release ca-certificates && \
+    apt-get install -y wget curl && \
+    apt-get install -y git mariadb-client composer && \
     curl -sSL https://packages.sury.org/php/README.txt | bash -x && \
     apt-get update && \
     apt install -y php$PHP_VERSION php${PHP_VERSION}-fpm && \
@@ -20,10 +22,30 @@ RUN apt-get update && \
     apt-get install -y php${PHP_VERSION}-redis && \
     apt-get install -y php${PHP_VERSION}-xml && \
     apt-get install -y php${PHP_VERSION}-zip && \
-    apt-get install -y wget git mariadb-client && \
     rm -rf /var/lib/apt/lists/* && apt-get clean
 
-EXPOSE 9000/TCP
+# Create build dir
+RUN mkdir -p /var/www/drupal-bootstrap.org-build
+
+# Set workdir to build dir
+WORKDIR /var/www/drupal-bootstrap.org-build
+
+# Copy site code
+COPY --chown=root:root docroot/ docroot/
+COPY --chown=root:root composer* ./
+
+RUN php${PHP_VERSION} /usr/bin/composer install
+
+# Copy in basic settings.php.
+COPY --chown=root:root docker/app/conf/drupal/* /var/www/drupal-bootstrap.org-build/docroot/sites/default/
+
+# Set permissions on build and install Drush
+RUN chown -R root:root docroot && \
+    chmod -R 750 docroot && \
+    wget https://github.com/drush-ops/drush/releases/download/8.1.18/drush.phar -O /usr/local/bin/drush && \
+    chmod +x /usr/local/bin/drush
+
+RUN ln -s /var/www/drupal-bootstrap.org-files /var/www/drupal-bootstrap.org-build/docroot/sites/default/files 
 
 # Configure Opcache
 RUN { \ 
@@ -54,14 +76,16 @@ RUN touch /var/log/php_access.log /var/log/php_error.log && \
 RUN wget https://github.com/drush-ops/drush/releases/download/8.1.18/drush.phar -O /usr/local/bin/drush && \
     chmod +x /usr/local/bin/drush
 
-RUN mkdir -p /var/www/drupal-bootstrap.org-repositories && \
-    mkdir /run/php/ && \
+RUN mkdir /run/php/ && \
     chown root:root /run/php && \
     chmod g+wrx /run/php && \
+    chmod -R g+rw /var/log /etc/php
+    mkdir -p /var/www/drupal-bootstrap.org-repositories && \
     chown -R root:www-data /var/www/drupal-bootstrap.org-repositories && \
     chmod -R 770 /var/www/drupal-bootstrap.org-repositories && \
-    chmod -R g+rw /var/log /etc/php
 
 COPY docker/fpm/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+EXPOSE 9000/TCP
 
 ENTRYPOINT /usr/local/bin/entrypoint.sh
