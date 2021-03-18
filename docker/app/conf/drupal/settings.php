@@ -614,6 +614,6 @@ $conf['preprocess_js'] = 1;
  * Keep this code block at the end of this file to take full effect.
  */
 
-if (file_exists(__DIR__ . '/settings.local.php')) {
-  include __DIR__ . '/settings.local.php';
+if (file_exists('/var/www/drupal-bootstrap.org-settings/settings.local.php')) {
+  include '/var/www/drupal-bootstrap.org-settings/settings.local.php';
 }

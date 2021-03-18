@@ -25,10 +25,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && apt-get clean
 
 # Create build dir
-RUN mkdir -p /var/www/drupal-bootstrap.org-build
+RUN mkdir -p /var/www/drupal-bootstrap.org
 
 # Set workdir to build dir
-WORKDIR /var/www/drupal-bootstrap.org-build
+WORKDIR /var/www/drupal-bootstrap.org
 
 # Copy site code
 COPY --chown=root:root docroot/ docroot/
@@ -37,7 +37,7 @@ COPY --chown=root:root composer* ./
 RUN php${PHP_VERSION} /usr/bin/composer install
 
 # Copy in basic settings.php.
-COPY --chown=root:root docker/app/conf/drupal/* /var/www/drupal-bootstrap.org-build/docroot/sites/default/
+COPY --chown=root:root docker/app/conf/drupal/* docroot/sites/default/
 
 # Set permissions on build and install Drush
 RUN chown -R root:root docroot && \
@@ -45,7 +45,7 @@ RUN chown -R root:root docroot && \
     wget https://github.com/drush-ops/drush/releases/download/8.1.18/drush.phar -O /usr/local/bin/drush && \
     chmod +x /usr/local/bin/drush
 
-RUN ln -s /var/www/drupal-bootstrap.org-files /var/www/drupal-bootstrap.org-build/docroot/sites/default/files 
+RUN ln -s /var/www/drupal-bootstrap.org-files /var/www/drupal-bootstrap.org/docroot/sites/default/files 
 
 # Configure Opcache
 RUN { \ 
@@ -79,10 +79,10 @@ RUN wget https://github.com/drush-ops/drush/releases/download/8.1.18/drush.phar 
 RUN mkdir /run/php/ && \
     chown root:root /run/php && \
     chmod g+wrx /run/php && \
-    chmod -R g+rw /var/log /etc/php
+    chmod -R g+rw /var/log /etc/php && \
     mkdir -p /var/www/drupal-bootstrap.org-repositories && \
     chown -R root:www-data /var/www/drupal-bootstrap.org-repositories && \
-    chmod -R 770 /var/www/drupal-bootstrap.org-repositories && \
+    chmod -R 770 /var/www/drupal-bootstrap.org-repositories
 
 COPY docker/fpm/entrypoint.sh /usr/local/bin/entrypoint.sh
 
