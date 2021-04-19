@@ -10,7 +10,7 @@ USER 0
 
 # Copy site code
 COPY . .
-COPY conf/settings.local.php vendor/sites/default/settings.local.php
+COPY conf/settings.local.php docroot/sites/default/settings.local.php
 
 RUN curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
   && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
