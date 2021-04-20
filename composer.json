@@ -21,5 +21,8 @@
                 "docroot/sites/all/modules/contrib/git_clone/src"
             ]
         }
+    },
+    "require-dev": {
+        "drush/drush": "^8"
     }
 }

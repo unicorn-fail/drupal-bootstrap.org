@@ -295,12 +295,9 @@ function composer_manager_file_dir() {
   }
 
   $dir_uri = variable_get('composer_manager_file_dir', $scheme . '://composer');
-  if (!composer_manager_prepare_directory($dir_uri)) {
-    throw new \RuntimeException(t('Error creating directory: @dir', array('@dir' => $dir_uri)));
-  }
+  composer_manager_prepare_directory($dir_uri);
   if (!$realpath = drupal_realpath($dir_uri)) {
     throw new \RuntimeException(t('Error resolving directory: @dir', array('@dir' => $dir_uri)));
   }
   return $realpath;
 }
-
