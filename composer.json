@@ -1,28 +1,162 @@
 {
-    "require": {
-        "league/commonmark": "~0.10.0",
-        "php": ">=5.3.0",
-        "webuni/commonmark-attributes-extension": "~0.2.0",
-        "webuni/commonmark-table-extension": "~0.3.0",
-        "sensiolabs/security-checker": "~2.0",
-        "gitonomy/gitlib": "~0.1.7"
-    },
-    "config": {
-        "autoloader-suffix": "ComposerManager",
-        "vendor-dir": "docroot/../vendor"
-    },
-    "prefer-stable": true,
-    "autoload": {
-        "psr-4": {
-            "Drupal\\CommonMark\\": [
-                "docroot/sites/all/modules/contrib/commonmark/src"
-            ],
-            "Drupal\\GitClone\\": [
-                "docroot/sites/all/modules/contrib/git_clone/src"
-            ]
+    "name": "unicorn-fail/drupal-bootstrap.org",
+    "description": "Drupal Bootstrap Documentation Site",
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "drupal/grammar_parser",
+                "version": "1.x-dev",
+                "dist": {
+                    "url": "https://ftp.drupal.org/files/projects/grammar_parser-7.x-1.x-dev.zip",
+                    "type": "zip"
+                },
+                "source": {
+                    "url": "https://git.drupalcode.org/project/grammar_parser.git",
+                    "type": "git",
+                    "reference": "master"
+                },
+                "type": "drupal-library"
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "filamentgroup/loadCSS",
+                "version": "dev-master",
+                "dist": {
+                    "url": "https://github.com/filamentgroup/loadCSS/archive/refs/heads/master.zip",
+                    "type": "zip"
+                },
+                "source": {
+                    "url": "https://github.com/filamentgroup/loadCSS.git",
+                    "type": "git",
+                    "reference": "master"
+                },
+                "type": "drupal-library"
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "tubalmartin/YUI-CSS-compressor-PHP-port",
+                "version": "dev-master",
+                "dist": {
+                    "url": "https://github.com/tubalmartin/YUI-CSS-compressor-PHP-port/archive/refs/heads/master.zip",
+                    "type": "zip"
+                },
+                "source": {
+                    "url": "https://github.com/tubalmartin/YUI-CSS-compressor-PHP-port.git",
+                    "type": "git",
+                    "reference": "master"
+                },
+                "type": "drupal-library"
+            }
+        },
+        {
+            "type": "composer",
+            "url": "https://packages.drupal.org/7"
         }
+    ],
+    "require": {
+        "php": "^7.4",
+        "ext-curl": "*",
+        "ext-gd": "*",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "ext-pdo": "*",
+        "ext-xml": "*",
+        "composer/installers": "^1.10.0",
+        "composer/semver": "^1.7.2",
+        "cweagans/composer-patches": "^1.7.0",
+        "drupal-composer/preserve-paths": "^0.1.6",
+        "drupal/admin_menu": "^3.0@RC",
+        "drupal/advagg": "^2.35",
+        "drupal/advanced_help": "^1.6",
+        "drupal/api": "^1.17",
+        "drupal/bootstrap": "^3.26",
+        "drupal/bootstrap_admin": "3.x-dev",
+        "drupal/commonmark": "^1.3",
+        "drupal/composer_autoloader": "^1.3.0",
+        "drupal/ctools": "^1.19",
+        "drupal/diff": "^3.4",
+        "drupal/drupal": "^7.80",
+        "drupal/features": "^2.13",
+        "drupal/features_override": "^2.0@RC",
+        "drupal/git_clone": "2.x-dev@dev",
+        "drupal/google_analytics": "^2.6",
+        "drupal/grammar_parser": "1.x-dev",
+        "drupal/grammar_parser_lib": "^2.1",
+        "drupal/grammar_parser_ui": "^2.0",
+        "drupal/icon": "^1.0",
+        "drupal/jquery_update": "^2.7",
+        "drupal/libraries": "^2.5",
+        "drupal/menu_trail_by_path": "^3.3",
+        "drupal/queue_ui": "^2.0@RC",
+        "drupal/rules": "^2.12",
+        "drupal/smtp": "^1.7",
+        "drupal/views": "^3.24",
+        "drush/drush": "^8.4.8",
+        "filamentgroup/loadcss": "dev-master",
+        "league/commonmark": "^0.10.0",
+        "sensiolabs/security-checker": "^2.0.6",
+        "symfony/filesystem": "^2.7 || ^3.4",
+        "tubalmartin/yui-css-compressor-php-port": "dev-master",
+        "webflo/drupal-finder": "^1.2.2",
+        "webuni/commonmark-attributes-extension": "^0.2.0",
+        "webuni/commonmark-table-extension": "^0.3.0"
     },
-    "require-dev": {
-        "drush/drush": "^8"
+    "conflict": {
+        "drupal/core": "8.*"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "classmap": [
+            "scripts/composer/ScriptHandler.php"
+        ]
+    },
+    "scripts": {
+        "pre-install-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
+        ],
+        "pre-update-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
+        ],
+        "post-install-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::createRequiredFiles"
+        ],
+        "post-update-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::createRequiredFiles"
+        ],
+        "post-create-project-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::removeInternalFiles"
+        ]
+    },
+    "extra": {
+        "installer-paths": {
+            "web/": ["type:drupal-core"],
+            "web/profiles/{$name}/": ["type:drupal-profile"],
+            "web/sites/all/drush/{$name}/": ["type:drupal-drush"],
+            "web/sites/all/libraries/{$name}/": ["type:drupal-library"],
+            "web/sites/all/modules/contrib/{$name}/": ["type:drupal-module"],
+            "web/sites/all/themes/contrib/{$name}/": ["type:drupal-theme"]
+        },
+        "patches-install-hooks": true,
+        "patches": {
+            "cweagans/composer-patches": {
+                "Call the preserve paths hooks" : "https://github.com/jcnventura/composer-patches/compare/1.x...jcnventura:fix-preserve-paths.diff"
+            }
+        },
+        "preserve-paths": [
+            "web/sites/all/modules/custom",
+            "web/sites/all/themes/custom",
+            "web/sites/default/settings.php",
+            "web/sites/default/local.settings.php",
+            "web/sites/default/files"
+        ]
     }
 }

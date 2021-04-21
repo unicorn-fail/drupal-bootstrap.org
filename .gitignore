@@ -1,13 +1,66 @@
-# Generic
+### Composer installer
+
+/web/sites/sites/
+/web/sites/*/libraries
+/web/sites/*/modules/contrib
+/web/sites/*/themes/contrib
+
+### IDEA/OS
 .DS_Store
 .idea
 
-# Settings
-/docroot/sites/*/settings.local.php
-
-# Composer
+### Composer template
+composer.phar
 /vendor/
-/docroot/sites/all/vendor/
 
-# User generated content
-/docroot/sites/*/files
+# Commit your application's lock file https://getcomposer.org/doc/01-basic-usage.md#commit-your-composer-lock-file-to-version-control
+# You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
+# composer.lock
+
+### Drupal7 template
+# gitignore template for Drupal 7 projects
+#
+# It is recommended that you use `Drupal.gitignore` as this is the latest version
+
+# Ignore configuration files that may contain sensitive information.
+/web/sites/*/*settings*.php
+/web/sites/example.sites.php
+
+# Ignore paths that contain generated content.
+/files/
+/web/files/
+/web/sites/*/files
+/web/sites/*/private
+/web//web/sites/*/translations
+
+# Ignore default text files
+/web/robots.txt
+/web/CHANGELOG.txt
+/web/COPYRIGHT.txt
+/web/INSTALL*.txt
+/web/LICENSE.txt
+/web/MAINTAINERS.txt
+/web/UPGRADE.txt
+/web/README.txt
+/web/sites/README.txt
+/web/sites/all/libraries/README.txt
+/web/sites/all/modules/README.txt
+/web/sites/all/themes/README.txt
+
+# Ignore everything but the "sites" folder ( for non core developer )
+/web/.editorconfig
+/web/.gitignore
+/web/.htaccess
+/web/web.config
+/web/authorize.php
+/web/cron.php
+/web/index.php
+/web/install.php
+/web/update.php
+/web/xmlrpc.php
+/web/includes
+/web/misc
+/web/modules
+/web/profiles
+/web/scripts
+/web/themes
