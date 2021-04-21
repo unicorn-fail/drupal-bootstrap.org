@@ -16,7 +16,7 @@ RUN dnf upgrade -y && \
     dnf install -y php php-mysqlnd php-pgsql php-bcmath \
                    php-gd php-intl php-json php-ldap php-mbstring php-pdo \
                    php-process php-soap php-opcache php-xml \
-                   php-gmp php-pecl-apcu php-zip mysql wget && \
+                   php-gmp php-pecl-apcu php-zip mysql wget git && \
     dnf clean all
 
 RUN curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
