@@ -29,7 +29,7 @@ RUN { \
   echo 'if (file_exists(__DIR__ . '/settings.local.php')) {'; \
   echo '  include_once __DIR__ . '/settings.local.php';'; \
   echo '}'; \
-} > web/sites/default/settings.php
+} >> web/sites/default/settings.php
 
 USER 1001
 
