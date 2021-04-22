@@ -26,9 +26,9 @@ RUN composer install && \
 COPY conf/settings.local.php web/sites/default/settings.local.php
 
 RUN { \
-  echo 'if (file_exists(__DIR__ . '/settings.local.php')) {'; \
-  echo '  include_once __DIR__ . '/settings.local.php';'; \
-  echo '}'; \
+  echo "if (file_exists(__DIR__ . '/settings.local.php')) {"; \
+  echo "  include_once __DIR__ . '/settings.local.php';"; \
+  echo "}"; \
 } >> web/sites/default/settings.php
 
 USER 1001
