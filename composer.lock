@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "60f1074c6934963946ab79b116b75909",
+    "content-hash": "693e8e45b442359ba9bcf50e75a98798",
     "packages": [
         {
             "name": "composer/installers",
@@ -1644,7 +1644,7 @@
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/git_clone.git",
-                "reference": "5990634afb18c4a3a78775608a7a9e9bc9766f48"
+                "reference": "118b0746b2f4f106014625f6d411473ced9a461f"
             },
             "require": {
                 "drupal/drupal": "~7.0",
@@ -1795,15 +1795,15 @@
         },
         {
             "name": "drupal/grammar_parser",
-            "version": "1.x-dev",
+            "version": "2.x-dev",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/grammar_parser.git",
-                "reference": "master"
+                "reference": "7.x-2.x"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/grammar_parser-7.x-1.x-dev.zip"
+                "url": "https://ftp.drupal.org/files/projects/grammar_parser-7.x-2.x-dev.zip"
             },
             "type": "drupal-library"
         },
@@ -1949,29 +1949,26 @@
         },
         {
             "name": "drupal/jquery_update",
-            "version": "2.7.0",
+            "version": "dev-3.x",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/jquery_update.git",
-                "reference": "7.x-2.7"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/jquery_update-7.x-2.7.zip",
-                "reference": "7.x-2.7",
-                "shasum": "1f1e663f63a6872923f0fc9cd51510f64233bae2"
+                "reference": "10464ddd8d08ed1f2fd362cbb3824356c31b2c3e"
             },
             "require": {
                 "drupal/drupal": "~7.0"
             },
             "type": "drupal-module",
             "extra": {
+                "branch-alias": {
+                    "dev-3.x": "3.x-dev"
+                },
                 "drupal": {
-                    "version": "7.x-2.7",
-                    "datestamp": "1445458536",
+                    "version": "7.x-3.0-alpha5+1-dev",
+                    "datestamp": "1549399380",
                     "security-coverage": {
-                        "status": "covered",
-                        "message": "Covered by Drupal's security advisory policy"
+                        "status": "not-covered",
+                        "message": "Dev releases are not covered by Drupal security advisories."
                     }
                 }
             },
@@ -2325,6 +2322,71 @@
             "homepage": "https://www.drupal.org/project/smtp",
             "support": {
                 "source": "https://git.drupalcode.org/project/smtp"
+            }
+        },
+        {
+            "name": "drupal/strongarm",
+            "version": "2.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/strongarm.git",
+                "reference": "7.x-2.0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/strongarm-7.x-2.0.zip",
+                "reference": "7.x-2.0",
+                "shasum": "51600bef5ca2ac240958764e1e8389f70639595c"
+            },
+            "require": {
+                "drupal/ctools": "*",
+                "drupal/drupal": "~7.0"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "drupal": {
+                    "version": "7.x-2.0",
+                    "datestamp": "1339604214",
+                    "security-coverage": {
+                        "status": "covered",
+                        "message": "Covered by Drupal's security advisory policy"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/7/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "bblake",
+                    "homepage": "https://www.drupal.org/user/620248"
+                },
+                {
+                    "name": "febbraro",
+                    "homepage": "https://www.drupal.org/user/43670"
+                },
+                {
+                    "name": "hefox",
+                    "homepage": "https://www.drupal.org/user/426416"
+                },
+                {
+                    "name": "mpotter",
+                    "homepage": "https://www.drupal.org/user/616192"
+                },
+                {
+                    "name": "skwashd",
+                    "homepage": "https://www.drupal.org/user/116305"
+                },
+                {
+                    "name": "tirdadc",
+                    "homepage": "https://www.drupal.org/user/383630"
+                }
+            ],
+            "description": "Enforces variable values defined by modules that need settings set to operate properly.",
+            "homepage": "https://www.drupal.org/project/strongarm",
+            "support": {
+                "source": "https://git.drupalcode.org/project/strongarm"
             }
         },
         {
@@ -4039,6 +4101,7 @@
         "drupal/features_override": 5,
         "drupal/git_clone": 20,
         "drupal/grammar_parser": 20,
+        "drupal/jquery_update": 20,
         "drupal/queue_ui": 5,
         "filamentgroup/loadcss": 20,
         "tubalmartin/yui-css-compressor-php-port": 20

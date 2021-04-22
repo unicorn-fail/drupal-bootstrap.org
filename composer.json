@@ -6,15 +6,15 @@
             "type": "package",
             "package": {
                 "name": "drupal/grammar_parser",
-                "version": "1.x-dev",
+                "version": "2.x-dev",
                 "dist": {
-                    "url": "https://ftp.drupal.org/files/projects/grammar_parser-7.x-1.x-dev.zip",
+                    "url": "https://ftp.drupal.org/files/projects/grammar_parser-7.x-2.x-dev.zip",
                     "type": "zip"
                 },
                 "source": {
                     "url": "https://git.drupalcode.org/project/grammar_parser.git",
                     "type": "git",
-                    "reference": "master"
+                    "reference": "7.x-2.x"
                 },
                 "type": "drupal-library"
             }
@@ -85,16 +85,17 @@
         "drupal/features_override": "^2.0@RC",
         "drupal/git_clone": "2.x-dev@dev",
         "drupal/google_analytics": "^2.6",
-        "drupal/grammar_parser": "1.x-dev",
+        "drupal/grammar_parser": "2.x-dev@dev",
         "drupal/grammar_parser_lib": "^2.1",
         "drupal/grammar_parser_ui": "^2.0",
         "drupal/icon": "^1.0",
-        "drupal/jquery_update": "^2.7",
+        "drupal/jquery_update": "3.x-dev@dev",
         "drupal/libraries": "^2.5",
         "drupal/menu_trail_by_path": "^3.3",
         "drupal/queue_ui": "^2.0@RC",
         "drupal/rules": "^2.12",
         "drupal/smtp": "^1.7",
+        "drupal/strongarm": "^2.0",
         "drupal/views": "^3.24",
         "drush/drush": "^8.4.8",
         "filamentgroup/loadcss": "dev-master",
@@ -149,6 +150,12 @@
         "patches": {
             "cweagans/composer-patches": {
                 "Call the preserve paths hooks" : "https://github.com/jcnventura/composer-patches/compare/1.x...jcnventura:fix-preserve-paths.diff"
+            },
+            "drupal/bootstrap": {
+                "https://www.drupal.org/project/bootstrap/issues/3180380": "https://www.drupal.org/files/issues/2020-11-21/3180380-2-provider-isset.patch"
+            },
+            "drupal/grammar_parser": {
+                "https://www.drupal.org/project/grammar_parser/issues/3052048": "https://www.drupal.org/files/issues/2019-08-22/continue_statements-3052048-1.patch"
             }
         },
         "preserve-paths": [
