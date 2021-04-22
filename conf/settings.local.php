@@ -23,12 +23,6 @@ $conf['advagg_skip_far_future_check'] = TRUE;
 
 $conf['jquery_update_jquery_version'] = '3.1';
 
-// Composer.
-$conf['composer_manager_autobuild_file'] = 0;
-$conf['composer_manager_autobuild_packages'] = 0;
-$conf['composer_manager_file_dir'] = '../';
-$conf['composer_manager_vendor_dir'] = '../vendor';
-
 // Binary paths.
 $conf['drush_binary'] = '/usr/local/bin/drush';
 $conf['git_binary'] = '/usr/bin/git';
