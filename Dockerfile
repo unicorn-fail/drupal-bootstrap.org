@@ -10,7 +10,6 @@ USER 0
 
 # Copy site code
 COPY . .
-COPY conf/settings.local.php web/sites/default/settings.local.php
 
 RUN curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
   && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
@@ -23,6 +22,8 @@ RUN composer install && \
     mkdir -p /var/www/drupal-bootstrap.org-repositories && \
     chown -R 1001:0 /var/www/drupal-bootstrap.org-repositories && \
     chmod -R 770 /var/www/drupal-bootstrap.org-repositories
+
+COPY conf/settings.local.php web/sites/default/settings.local.php
 
 USER 1001
 
