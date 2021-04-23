@@ -15,7 +15,7 @@ RUN dnf upgrade -y && dnf module enable -y php:7.4 && \
     dnf install -y php php-mysqlnd php-pgsql php-bcmath \
                    php-gd php-intl php-json php-ldap php-mbstring php-pdo \
                    php-process php-soap php-opcache php-xml \
-                   php-gmp php-pecl-apcu php-zip mysql wget git && \
+                   php-gmp php-pecl-apcu php-zip mysql wget git strace && \
     dnf clean all
 
 RUN echo 'memory_limit = 500M' >> /etc/php.ini && \
